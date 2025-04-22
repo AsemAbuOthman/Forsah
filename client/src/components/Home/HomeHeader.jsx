@@ -1,6 +1,7 @@
 import { useState } from "react"
 import HomeHeaderMenu from "./HomeHeaderMenu"
 import HomeHeaderMenuExplore from "./HomeHeaderMenuExplore";
+import { useNavigate } from "react-router-dom";
 
 
 export default function HomeHeader() {
@@ -8,6 +9,8 @@ export default function HomeHeader() {
 
     const [isHover, setIsHover] = useState(false);
     const [tabId, setTabId] = useState(0);
+
+    const navigate = useNavigate();
 
     const tabsFirstOption = [
         { id: 1, title: "By talent", desc: "Looking for a talent depend on specific skills ? Start here.", icon: "ri-brain-line" },
@@ -85,7 +88,7 @@ export default function HomeHeader() {
     return (
         <>
             <header className="container md:flex justify-center items-center  relative top-0 w-full  m-auto p-2 py-6  md:py-15 z-1000">
-                <div className="flex justify-evenly items-center bg-white px-5 md:px-10 md:h-18  h-15 rounded-full shadow-[1px_0px_10px_1px_rgba(0,0,0,0.7)] md:fixed ">
+                <div className="flex justify-evenly items-center bg-white px-5 md:px-10 md:h-18  h-15 rounded-full shadow-[1px_0px_10px_1px_rgba(0,0,0,0.4)] md:fixed ">
 
                     <div className="hidden md:block md:pr-15">
                         <a href="/">
@@ -141,8 +144,8 @@ export default function HomeHeader() {
                         <div className="md:hidden px-2">
                             <img className="w-35" src="/logo_light.svg" alt="Forsah" />
                         </div>
-                        <a href="/login" className="hidden md:block md:px-5 font-medium transition duration-200 hover:text-[#00ff00]/80 hover:scale-105">Log in</a>
-                        <button className=" bg-black/80 text-white rounded-full px-5 py-0.5 md:px-10 md:py-1 transition delay-150 duration-400 ease-in-out hover:translate-x-1  hover:bg-gradient-to-tr from-[#44a201] to-[#a1ff25] not-hover:shadow-[0px_0px_5px_1px_rgba(0,0,0,0.7)] ">Join</button>      
+                        <a onClick={()=> navigate("/login")}  className="cursor-pointer hidden md:block md:px-5 font-medium transition duration-200 hover:text-[#00ff00]/80 hover:scale-105">Log in</a>
+                        <button onClick={()=> navigate("/signup")} className="cursor-pointer bg-black/80 text-white rounded-full px-5 py-0.5 md:px-10 md:py-1 transition delay-150 duration-400 ease-in-out hover:translate-x-1  hover:bg-gradient-to-tr from-[#44a201] to-[#a1ff25] not-hover:shadow-[0px_0px_5px_1px_rgba(0,0,0,0.7)] ">Join</button>      
                     </div>
                 </div>
             </header>

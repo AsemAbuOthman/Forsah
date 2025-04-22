@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+    frontend:
+        build: ./client
+        ports:
+            - "3001:80" # Mapped to 3001 to avoid conflict with backend
+        depends_on:
+            - backend
+        environment:
+            - NODE_ENV=production
+
+    backend:
+        build: ./server
+        ports:
+            - "3000:3000" # Exposing backend on port 3000
+        environment:
+            - DB_SERVER=sqlserver
+            - DB_USER=sa
+            - DB_PASSWORD=YourStrong@Passw0rd
+            - DB_NAME=YourDatabase
+        depends_on:
+            - sqlserver
+
+    sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+            - "1433:1433"
+        environment:
+            - ACCEPT_EULA=Y
+            - SA_PASSWORD=YourStrong@Passw0rd
+            - MSSQL_PID=Express
+        volumes:
+            - sqlserver-data:/var/opt/mssql
+            - ./database/init:/docker-entrypoint-initdb.d
+
+volumes:
+    sqlserver-data:

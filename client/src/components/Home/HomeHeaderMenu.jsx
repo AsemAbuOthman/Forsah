@@ -21,7 +21,7 @@ export default function HomeHeaderMenu({tabs, categories, otherTalents, secondTa
                 const response = await axios.get(countriesApi);
                 const filteredCountries = response.data.map((country) => ({
                     name: country.name.common,
-                    flag: country.flags.svg,
+                    imgUrl: country.flags.svg,
                 }));
                 setCountries(filteredCountries);
                 console.log(filteredCountries);
@@ -65,9 +65,9 @@ export default function HomeHeaderMenu({tabs, categories, otherTalents, secondTa
 
     return (
         <> 
-            <nav className="md:flex items-start justify-center  starting:-translate-x-60 transition duration-500 ease-in-out z-100 h-140 w-fit m-0 py-5 mt-10 fixed ">
+            <nav className="md:flex items-start justify-center  starting:-translate-x-60 transition duration-500 ease-in-out z-100 h-140 w-fit m-0 py-5 mt-10 fixed">
 
-                <div className="hidden  bg-gradient-to-tr from-[#ff00008a] via-yellow-400 to-amber-500  w-fit h-full md:flex justify-around flex-wrap overflow-auto gap-10   py-6 px-8 rounded-2xl">
+                <div className="hidden  bg-gradient-to-tr from-[#ff00008a] via-yellow-400 to-amber-500  w-fit h-full md:flex justify-around flex-wrap overflow-auto gap-10   py-6 px-8 rounded-2xl  shadow-[0px_0px_10px_1px_rgba(0,0,0,0.3)]">
 
                     <div className="md:flex flex-col  items-center gap-2 h-fit ">
                         <div className="space-y-4">
@@ -83,7 +83,7 @@ export default function HomeHeaderMenu({tabs, categories, otherTalents, secondTa
                         }
                     </div>
 
-                    <div className="">
+                    <div className=" text-white">
                         {
                             showOtherTalents()
                         }

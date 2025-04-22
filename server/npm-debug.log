@@ -13,7 +13,7 @@
 7 verbose unsafe-perm in lifecycle true
 8 info server@1.0.0 Failed to exec client script
 9 verbose stack Error: server@1.0.0 client: `cd ../client && npm run dev`
-9 verbose stack Exit status 3221225786
+9 verbose stack Exit status 1
 9 verbose stack     at EventEmitter.<anonymous> (C:\Users\asimw\node_modules\npm\lib\utils\lifecycle.js:217:16)
 9 verbose stack     at EventEmitter.emit (node:events:507:28)
 9 verbose stack     at ChildProcess.<anonymous> (C:\Users\asimw\node_modules\npm\lib\utils\spawn.js:24:14)
@@ -28,7 +28,7 @@
 15 error npm  v2.15.12
 16 error code ELIFECYCLE
 17 error server@1.0.0 client: `cd ../client && npm run dev`
-17 error Exit status 3221225786
+17 error Exit status 1
 18 error Failed at the server@1.0.0 client script 'cd ../client && npm run dev'.
 18 error This is most likely a problem with the server package,
 18 error not with npm itself.
