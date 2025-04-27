@@ -1,3 +1,6 @@
+const { fontFamily } = require("tailwindcss/defaultTheme");
+
+
     /** @type {import('tailwindcss').Config} */
     export default {
     content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -17,6 +20,25 @@
             '0%': { transform: 'translateY(10px)', opacity: 0 },
             '100%': { transform: 'translateY(0)', opacity: 1 },
             },
+        },
+        borderColor: {
+            border: 'hsl(var(--border))',
+        },
+        textColor: {
+            foreground: 'hsl(var(--foreground))',
+        },
+        backgroundColor: {
+            background: 'hsl(var(--background))',
+        },
+        colors: {
+            background: "hsl(var(--background))",
+            foreground: "hsl(var(--foreground))",
+            muted: "hsl(var(--muted))",
+            "muted-foreground": "hsl(var(--muted-foreground))",
+            ring: "hsl(var(--ring))",
+            "ring-offset": "hsl(var(--ring-offset))",
+            accent: "hsl(var(--accent))",
+            "accent-foreground": "hsl(var(--accent-foreground))",
         },
         },
     },

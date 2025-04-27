@@ -8,8 +8,9 @@ import NotFound from '../pages/NotFound'
 import HomeDashboardHeader from '../components/HomeDashboardHeader'
 import LogOut from '../components/LogOut'
 import LogInForm from '../components/LogInForm';
-import Profile from '../components/Profile1';
+// import Profile from '../components/Profile1';
 // import Profile from '../components/ProfilePage';
+import Profile from "../src1/ProfilePage";
 import SignUp from '../pages/SignUp';
 import AccountAnalytics from '../components/AccountAnalytics'
 import  Settings  from '../components/Settings/Settings';

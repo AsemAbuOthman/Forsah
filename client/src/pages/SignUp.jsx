@@ -224,7 +224,7 @@ export default function SignUp() {
 
             const updatedForm = await handleSubmitImageToFirebase(); // Wait for upload and update
         
-            const res = await axios.post('/api/signin', updatedForm || formData); // use updatedForm if available
+            const res = await axios.post('/api/signup', updatedForm || formData); // use updatedForm if available
         
             if (res.data) {
                 toast.success('Account created successfully!');
@@ -249,7 +249,7 @@ export default function SignUp() {
 
     const handleDateChange = (e) => {
         setSelectedDate(new Date(e.target.value));
-        
+
     };
 
     return (

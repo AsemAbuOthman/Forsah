@@ -98,4 +98,25 @@ const clsUser = require('../model/clsUser.model');
         }
     }
 
-module.exports = {getUser, getCountries, getCurrencies, getCategories, insertUser};
+    const findUser = async (req, res, id) => {
+        try {
+        
+            const user = await clsUser.findUser(id);
+        
+            // console.log( 'user : ', user);
+
+            if (user) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(user));
+            } else {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Invalid credentials' }));
+            }
+            } catch (error) {
+                console.log('Login Error:)' + error);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Internal server error' }));
+        }
+    };
+
+module.exports = {getUser, getCountries, getCurrencies, getCategories, insertUser, findUser};

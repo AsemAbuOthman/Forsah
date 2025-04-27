@@ -2,7 +2,7 @@ const http = require('http');
 const url = require('url'); 
 const path = require('path');
 const getRawBody = require('raw-body')
-const {getUser, getCountries, getCurrencies, getCategories, insertUser} = require('./controller/clsUser.controller');
+const {getUser, getCountries, getCurrencies, getCategories, insertUser, findUser} = require('./controller/clsUser.controller');
 
 
 const server = http.createServer(async (req, res)=>{
@@ -51,7 +51,7 @@ const server = http.createServer(async (req, res)=>{
         return getCategories(req, res);
     }
 
-    if (pathUrl === '/api/signin' && req.method === 'POST')  {
+    if (pathUrl === '/api/signup' && req.method === 'POST')  {
 
         let body = await getRawBody(req);
         
@@ -59,6 +59,13 @@ const server = http.createServer(async (req, res)=>{
         return insertUser(req, res, body.toString());
     }
 
+    if (pathUrl === '/api/users/:id')  {
+
+        let body = await getRawBody(req);
+        
+        console.log('Posting to api/finding User using id ... body => ', body.toString());
+        return findUser(req, res, body.id.toString());
+    }
 
     if (req.method === 'OPTIONS') {
         res.writeHead(204);
