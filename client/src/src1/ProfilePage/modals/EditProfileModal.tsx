@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -9,6 +9,7 @@ import { updateUserProfile } from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
 import { User } from "../../lib/types";
 import { X } from "lucide-react";
+import { UserContext } from "../../../store/UserProvider";
 
 interface EditProfileModalProps {
   user: User;
@@ -18,22 +19,26 @@ interface EditProfileModalProps {
 
 export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProps) {
   const [formData, setFormData] = useState({
-    fullName: user.fullName,
-    title: user.title,
-    location: user.location,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    professionalTitle: user.professionalTitle,
+    countryId: user.countryId,
     hourlyRate: "75", // Example default value
-    about: user.about || ""
+    profileDescription: user.profileDescription || ""
   });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+  const [userData, setUserData] = useContext(UserContext)
+
   const updateUserMutation = useMutation({
-    mutationFn: (userData: Partial<User>) => {
-      return updateUserProfile(user.id, userData);
+    mutationFn: (userDetails: Partial<User>) => {
+
+      setUserData(updateUserProfile(user.userId, userDetails));
+      return userData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
@@ -59,10 +64,11 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
     e.preventDefault();
     
     updateUserMutation.mutate({
-      fullName: formData.fullName,
-      title: formData.title,
-      location: formData.location,
-      about: formData.about
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      professionalTitle: formData.professionalTitle,
+      countryId: formData.countryId,
+      profileDescription: formData.profileDescription
     });
   };
   
@@ -84,33 +90,44 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="firstName">First Name</Label>
               <Input
-                id="fullName"
-                name="fullName"
-                value={formData.fullName}
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
                 onChange={handleChange}
                 required
               />
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="title">Professional Title</Label>
+              <Label htmlFor="professionalTitle">Professional Title</Label>
               <Input
-                id="title"
-                name="title"
-                value={formData.title}
+                id="professionalTitle"
+                name="professionalTitle"
+                value={formData.professionalTitle}
                 onChange={handleChange}
                 required
               />
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="location">Location</Label>
+              <Label htmlFor="countryId">Location</Label>
               <Input
-                id="location"
-                name="location"
-                value={formData.location}
+                id="countryId"
+                name="countryId"
+                value={formData.countryId}
                 onChange={handleChange}
                 required
               />
@@ -134,7 +151,7 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
               <Textarea
                 id="about"
                 name="about"
-                value={formData.about}
+                value={formData.profileDescription}
                 onChange={handleChange}
                 rows={4}
               />

@@ -282,7 +282,7 @@ export default function SignUp() {
                                     value={formData.dateOfBirth}
                                     onChange={handleChange}
                                     max={minDateStr}
-                                    className={`w-full px-4 py-3 border ${errors.email ? 'border-red-500' : 'border-gray-300'} border-orange-400  rounded-xl shadow-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition`}
+                                    className={`w-full px-4 py-3 border ${errors.dateOfBirth ? 'border-red-500' : 'border-gray-300'} border-orange-400  rounded-xl shadow-md bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-500 transition`}
                                 />
                                 {errors.dateOfBirth && <p className="text-red-500 text-xs mt-1 ml-2">{errors.dateOfBirth}</p>}
                                 <p className="text-xs text-gray-500 mt-1">

@@ -90,13 +90,13 @@ export default function ExperienceSection({
       ) : (
         <div className="relative pl-6 before:content-[''] before:absolute before:left-1 before:top-2 before:bottom-6 before:w-0.5 before:bg-gray-200">
           {sortedExperiences.map((experience, index) => (
-            <div key={experience.id} className="mb-6 relative">
+            <div key={experience.experienceId} className="mb-6 relative">
               <div className="absolute w-2.5 h-2.5 rounded-full bg-blue-500 -left-[19px] top-1.5"></div>
               <div className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-all">
                 <div className="flex justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-800">{experience.title}</h4>
-                    <p className="text-gray-600">{experience.company}</p>
+                    <h4 className="font-medium text-gray-800">{experience.experienceTitle}</h4>
+                    <p className="text-gray-600">{experience.experienceCompanyName}</p>
                     <p className="text-gray-500 text-sm">
                       {formatExperienceDuration(experience.startDate, experience.endDate)}
                     </p>
@@ -114,15 +114,15 @@ export default function ExperienceSection({
                       variant="ghost"
                       size="icon"
                       className="text-red-400 hover:text-red-600 h-6 w-6"
-                      onClick={() => handleDelete(experience.id)}
+                      onClick={() => handleDelete(experience.experienceId)}
                     >
                       <Trash2Icon className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
-                {experience.description && (
+                {experience.experienceDescription && (
                   <p className="text-gray-700 mt-3 text-sm">
-                    {experience.description}
+                    {experience.experienceDescription}
                   </p>
                 )}
               </div>

@@ -54,7 +54,7 @@ const CreateProfileModal = ({
       // Create the profile
       await createUserProfile(userId, {
         ...data,
-        parentUserId: userId,
+        userId: userId,
       });
       
       // Invalidate profiles query

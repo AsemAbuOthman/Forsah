@@ -22,34 +22,34 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
   const [noExpiration, setNoExpiration] = useState(false);
   
   const [formData, setFormData] = useState({
-    title: "",
-    issuer: "",
-    issueDate: "",
-    expiryDate: "",
+    certificationTitle: "",
+    certificationOrganization: "",
+    startDate: "",
+    endDate: "",
     certificateImage: "",
-    certificateUrl: ""
+    certificationUrl: ""
   });
 
   useEffect(() => {
     if (certification) {
       setFormData({
-        title: certification.title,
-        issuer: certification.issuer,
-        issueDate: certification.issueDate ? new Date(certification.issueDate).toISOString().split('T')[0] : "",
-        expiryDate: certification.expiryDate ? new Date(certification.expiryDate).toISOString().split('T')[0] : "",
+        certificationTitle: certification.certificationTitle,
+        certificationOrganization: certification.certificationOrganization,
+        startDate: certification.startDate ? new Date(certification.startDate).toISOString().split('T')[0] : "",
+        endDate: certification.endDate ? new Date(certification.endDate).toISOString().split('T')[0] : "",
         certificateImage: certification.certificateImage || CERTIFICATE_IMAGES[0],
-        certificateUrl: certification.certificateUrl || ""
+        certificationUrl: certification.certificationUrl || ""
       });
-      setNoExpiration(!certification.expiryDate);
+      setNoExpiration(!certification.endDate);
     } else {
       // Default values for new certification
       setFormData({
-        title: "",
-        issuer: "",
-        issueDate: new Date().toISOString().split('T')[0],
-        expiryDate: "",
+        certificationTitle: "",
+        certificationOrganization: "",
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: "",
         certificateImage: CERTIFICATE_IMAGES[0],
-        certificateUrl: ""
+        certificationUrl: ""
       });
       setNoExpiration(false);
     }
@@ -62,7 +62,7 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
   const certificationMutation = useMutation({
     mutationFn: (data: Partial<Certification>) => {
       if (isEditing && certification) {
-        return updateCertification(certification.id, data);
+        return updateCertification(certification.certificationId, data);
       } else {
         return createCertification({
           ...data as any,
@@ -99,25 +99,12 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
     // Prepare data for submission
     const certificationData: Partial<Certification> = {
       ...formData,
-      expiryDate: noExpiration ? undefined : formData.expiryDate
+      endDate: noExpiration ? undefined : formData.endDate
     };
     
     certificationMutation.mutate(certificationData);
   };
 
-  // Simulated function to change certificate image
-  const handleChangeImage = () => {
-    // Find the index of the current image
-    const currentIndex = CERTIFICATE_IMAGES.findIndex(img => img === formData.certificateImage);
-    
-    // Select the next image in the array, or the first if we're at the end
-    const nextIndex = (currentIndex + 1) % CERTIFICATE_IMAGES.length;
-    
-    setFormData(prev => ({
-      ...prev,
-      certificateImage: CERTIFICATE_IMAGES[nextIndex]
-    }));
-  };
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -137,11 +124,11 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">Certification Title</Label>
+              <Label htmlFor="certificationTitle">Certification Title</Label>
               <Input
-                id="title"
-                name="title"
-                value={formData.title}
+                id="certificationTitle"
+                name="certificationTitle"
+                value={formData.certificationTitle}
                 onChange={handleChange}
                 placeholder="e.g. AWS Certified Solutions Architect"
                 required
@@ -149,11 +136,11 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="issuer">Issuing Organization</Label>
+              <Label htmlFor="certificationOrganization">Issuing Organization</Label>
               <Input
-                id="issuer"
-                name="issuer"
-                value={formData.issuer}
+                id="certificationOrganization"
+                name="certificationOrganization"
+                value={formData.certificationOrganization}
                 onChange={handleChange}
                 placeholder="e.g. Amazon Web Services"
                 required
@@ -161,12 +148,12 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="issueDate">Issue Date</Label>
+              <Label htmlFor="startDate">Issue Date</Label>
               <Input
-                id="issueDate"
-                name="issueDate"
+                id="startDate"
+                name="startDate"
                 type="date"
-                value={formData.issueDate}
+                value={formData.startDate}
                 onChange={handleChange}
                 required
               />
@@ -174,7 +161,7 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
             
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="expiryDate" className={noExpiration ? "text-gray-400" : ""}>
+                <Label htmlFor="endDate" className={noExpiration ? "text-gray-400" : ""}>
                   Expiry Date
                 </Label>
                 <div className="flex items-center space-x-2">
@@ -194,10 +181,10 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
                 </div>
               </div>
               <Input
-                id="expiryDate"
-                name="expiryDate"
+                id="endDate"
+                name="endDate"
                 type="date"
-                value={formData.expiryDate}
+                value={formData.endDate}
                 onChange={handleChange}
                 disabled={noExpiration}
                 className={noExpiration ? "bg-gray-100" : ""}
@@ -206,35 +193,12 @@ export function EditCertificationModal({ certification, isOpen, onClose }: EditC
             </div>
             
             <div className="grid gap-2">
-              <Label>Certificate Image</Label>
-              <div className="flex items-center space-x-4">
-                <div className="relative w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
-                  <img 
-                    src={formData.certificateImage} 
-                    alt="Certificate" 
-                    className="w-full h-full object-contain" 
-                  />
-                </div>
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={handleChangeImage}
-                >
-                  Change Image
-                </Button>
-                <div className="text-xs text-gray-500">
-                  This would be an image upload in a real application.
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="certificateUrl">Certificate URL (optional)</Label>
+              <Label htmlFor="certificationUrl">Certificate URL (optional)</Label>
               <Input
-                id="certificateUrl"
-                name="certificateUrl"
+                id="certificationUrl"
+                name="certificationUrl"
                 type="url"
-                value={formData.certificateUrl}
+                value={formData.certificationUrl}
                 onChange={handleChange}
                 placeholder="https://example.com/certificate"
               />

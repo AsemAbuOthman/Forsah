@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { SkillCategory } from "./types";
+import {getCategoriesWithSkills} from './api'
 
 // Default user ID for the application
-export const DEFAULT_USER_ID = 1;
+export const DEFAULT_USER_ID = 2026;
 
 // Image placeholder URLs
 export const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e";
@@ -28,76 +30,80 @@ export const PORTFOLIO_IMAGES = [
 ];
 
 export const CERTIFICATE_IMAGES = [
-  "https://images.unsplash.com/photo-1633356122102-3fe601e05bd2",
-  "https://images.unsplash.com/photo-1573495627361-d9b87960b12d",
-  "https://images.unsplash.com/photo-1606857521015-7f9fcf423740",
-  "https://images.unsplash.com/photo-1601881614875-0d128922256c"
+  "https://img.freepik.com/premium-photo/bestseller-badge-3d-badge-3d-illustration_118019-6434.jpg?uid=R132432657&ga=GA1.1.710432733.1736715852&semt=ais_hybrid&w=740",
 ];
 
+export let SKILL_CATEGORIES: SkillCategory[] = [];
+
+// Call immediately (but this has limitations)
+getCategoriesWithSkills().then(data => {
+  SKILL_CATEGORIES = data;
+});
+
 // Skill categories and options
-export const SKILL_CATEGORIES: SkillCategory[] = [
-  {
-    name: "Programming Languages",
-    options: [
-      { value: "javascript", label: "JavaScript" },
-      { value: "typescript", label: "TypeScript" },
-      { value: "python", label: "Python" },
-      { value: "php", label: "PHP" },
-      { value: "java", label: "Java" },
-      { value: "csharp", label: "C#" },
-      { value: "cpp", label: "C++" },
-      { value: "ruby", label: "Ruby" },
-      { value: "go", label: "Go" },
-      { value: "swift", label: "Swift" },
-      { value: "kotlin", label: "Kotlin" },
-    ]
-  },
-  {
-    name: "Frameworks & Libraries",
-    options: [
-      { value: "react", label: "React" },
-      { value: "angular", label: "Angular" },
-      { value: "vue", label: "Vue.js" },
-      { value: "nextjs", label: "Next.js" },
-      { value: "nodejs", label: "Node.js" },
-      { value: "express", label: "Express" },
-      { value: "django", label: "Django" },
-      { value: "flask", label: "Flask" },
-      { value: "laravel", label: "Laravel" },
-      { value: "spring", label: "Spring" },
-      { value: "dotnet", label: ".NET" },
-    ]
-  },
-  {
-    name: "Databases",
-    options: [
-      { value: "mongodb", label: "MongoDB" },
-      { value: "postgresql", label: "PostgreSQL" },
-      { value: "mysql", label: "MySQL" },
-      { value: "firebase", label: "Firebase" },
-      { value: "sqlite", label: "SQLite" },
-      { value: "redis", label: "Redis" },
-      { value: "oracle", label: "Oracle" },
-      { value: "mssql", label: "Microsoft SQL Server" },
-    ]
-  },
-  {
-    name: "Other",
-    options: [
-      { value: "aws", label: "AWS" },
-      { value: "azure", label: "Azure" },
-      { value: "gcp", label: "Google Cloud" },
-      { value: "docker", label: "Docker" },
-      { value: "kubernetes", label: "Kubernetes" },
-      { value: "git", label: "Git" },
-      { value: "graphql", label: "GraphQL" },
-      { value: "restapi", label: "REST API" },
-      { value: "cicd", label: "CI/CD" },
-      { value: "agile", label: "Agile" },
-      { value: "scrum", label: "Scrum" },
-    ]
-  }
-];
+// export const SKILL_CATEGORIES: SkillCategory[] = [
+//   {
+//     name: "Programming Languages",
+//     options: [
+//       { value: "javascript", label: "JavaScript" },
+//       { value: "typescript", label: "TypeScript" },
+//       { value: "python", label: "Python" },
+//       { value: "php", label: "PHP" },
+//       { value: "java", label: "Java" },
+//       { value: "csharp", label: "C#" },
+//       { value: "cpp", label: "C++" },
+//       { value: "ruby", label: "Ruby" },
+//       { value: "go", label: "Go" },
+//       { value: "swift", label: "Swift" },
+//       { value: "kotlin", label: "Kotlin" },
+//     ]
+//   },
+//   {
+//     name: "Frameworks & Libraries",
+//     options: [
+//       { value: "react", label: "React" },
+//       { value: "angular", label: "Angular" },
+//       { value: "vue", label: "Vue.js" },
+//       { value: "nextjs", label: "Next.js" },
+//       { value: "nodejs", label: "Node.js" },
+//       { value: "express", label: "Express" },
+//       { value: "django", label: "Django" },
+//       { value: "flask", label: "Flask" },
+//       { value: "laravel", label: "Laravel" },
+//       { value: "spring", label: "Spring" },
+//       { value: "dotnet", label: ".NET" },
+//     ]
+//   },
+//   {
+//     name: "Databases",
+//     options: [
+//       { value: "mongodb", label: "MongoDB" },
+//       { value: "postgresql", label: "PostgreSQL" },
+//       { value: "mysql", label: "MySQL" },
+//       { value: "firebase", label: "Firebase" },
+//       { value: "sqlite", label: "SQLite" },
+//       { value: "redis", label: "Redis" },
+//       { value: "oracle", label: "Oracle" },
+//       { value: "mssql", label: "Microsoft SQL Server" },
+//     ]
+//   },
+//   {
+//     name: "Other",
+//     options: [
+//       { value: "aws", label: "AWS" },
+//       { value: "azure", label: "Azure" },
+//       { value: "gcp", label: "Google Cloud" },
+//       { value: "docker", label: "Docker" },
+//       { value: "kubernetes", label: "Kubernetes" },
+//       { value: "git", label: "Git" },
+//       { value: "graphql", label: "GraphQL" },
+//       { value: "restapi", label: "REST API" },
+//       { value: "cicd", label: "CI/CD" },
+//       { value: "agile", label: "Agile" },
+//       { value: "scrum", label: "Scrum" },
+//     ]
+//   }
+// ];
 
 export const SKILL_LEVELS = [
   { value: "Beginner", label: "Beginner" },
@@ -107,8 +113,15 @@ export const SKILL_LEVELS = [
 
 // Color mappings for skills based on category
 export const SKILL_CATEGORY_COLORS: Record<string, string> = {
-  "Programming Languages": "blue",
-  "Frameworks & Libraries": "purple",
-  "Databases": "green",
+  "Web Development": "blue",
+  "Graphic Design": "purple",
+  "Writing & Translation": "green",
+  "Digital Marketing": "orange",
+  "Video & Animation": "amber",
+  "Mobile App Development": "purple",
+  "Data Science & AI": "blue",
+  "Customer Support": "green",
+  "Business & Finance": "green",
+  "Game Development": "yellow",
   "Other": "yellow"
 };

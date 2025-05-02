@@ -46,8 +46,8 @@ export default function EducationSection({
 
   // Sort educations by end year (most recent first)
   const sortedEducations = [...educations].sort((a, b) => {
-    const endYearA = a.endYear || '9999';
-    const endYearB = b.endYear || '9999';
+    const endYearA = a.endDate || '9999';
+    const endYearB = b.endDate || '9999';
     return endYearB.localeCompare(endYearA);
   });
 
@@ -79,19 +79,19 @@ export default function EducationSection({
         <div className="space-y-4">
           {sortedEducations.map((education) => (
             <div 
-              key={education.id} 
+              key={education.educationId} 
               className="border border-gray-200 rounded-lg p-4 relative hover:border-blue-300 transition-all card-hover"
             >
               <div className="flex justify-between">
                 <div>
-                  <h4 className="font-medium text-gray-800">{education.degree}</h4>
-                  <p className="text-gray-600">{education.institution}</p>
+                  <h4 className="font-medium text-gray-800">{education.educationDegree}</h4>
+                  <p className="text-gray-600">{education.educationOrganization}</p>
                   <p className="text-gray-500 text-sm">
-                    {education.startYear} - {education.endYear || 'Present'}
+                    {education.startDate} - {education.endDate || 'Present'}
                   </p>
-                  {education.description && (
+                  {education.educationDescription && (
                     <p className="text-gray-700 mt-2 text-sm">
-                      {education.description}
+                      {education.educationDescription}
                     </p>
                   )}
                 </div>
@@ -108,7 +108,7 @@ export default function EducationSection({
                     variant="ghost"
                     size="icon"
                     className="text-red-400 hover:text-red-600 h-6 w-6"
-                    onClick={() => handleDelete(education.id)}
+                    onClick={() => handleDelete(education.educationId)}
                   >
                     <Trash2Icon className="h-3 w-3" />
                   </Button>

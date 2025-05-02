@@ -41,6 +41,7 @@ import { ViewCertificationModal } from "../ProfilePage/modals/ViewCertificationM
 import SwitchProfileModal from "../ProfilePage/modals/SwitchProfileModal";
 import CreateProfileModal from "../ProfilePage/modals/CreateProfileModal";
 import axios from "axios";
+import { data } from "react-router-dom";
 
 export default function Profile() {
   // Modal state
@@ -52,34 +53,44 @@ export default function Profile() {
   const [selectedSkillCategory, setSelectedSkillCategory] = useState<string | undefined>(undefined);
   const [userProfiles, setUserProfiles] = useState<User[]>([]);
   const [userData, setUserData] = useContext(UserContext);
-
+  // let DEFAULT_USER_ID = userData.userId;
+  console.log(userData);
+  
   
   // Fetch user data
-  const { data: user, isLoading: isUserLoading } = useQuery({
+  
+  const { data: user, isLoading: isUserLoading , refetch} = useQuery({
     queryKey: [`/api/users/${DEFAULT_USER_ID}`], 
     queryFn: () => getUserProfile(DEFAULT_USER_ID)
   });
   
+  useEffect(() => {
+    refetch();
+  }, [userData]);
+  
   // Fetch user profiles
-  const { data: profiles = [] } = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}/profiles`],
-    queryFn: () => getUserProfile(DEFAULT_USER_ID),
-    enabled: !!user && !user.parentUserId
-  });
+  // const { data: profiles = [] } = useQuery({
+  //   queryKey: [`/api/users/${DEFAULT_USER_ID}/profiles`],
+  //   queryFn: () => getUserProfile(DEFAULT_USER_ID),
+  //   enabled: !!user && !user.userId
+  // });
   
   // Store user profiles in state
-  useEffect(() => {
-    if (profiles?.length > 0) {
-      setUserProfiles(profiles);
-    }
-  }, [profiles]);
+  // useEffect(() => {
+  //   if (profiles?.length > 0) {
+  //     setUserProfiles(profiles);
+  //   }
+  // }, [profiles]);
 
   // Fetch skills
+
+
   const { data: skills = [], isLoading: isSkillsLoading } = useQuery({
     queryKey: [`/api/users/${DEFAULT_USER_ID}/skills`],
     queryFn: () => getUserSkills(DEFAULT_USER_ID),
     enabled: !!user
   });
+
 
   // Fetch portfolios
   const { data: portfolios = [], isLoading: isPortfoliosLoading } = useQuery({
@@ -109,6 +120,7 @@ export default function Profile() {
     enabled: !!user
   });
 
+
   // Fetch reviews
   const { data: reviews = [], isLoading: isReviewsLoading } = useQuery({
     queryKey: [`/api/users/${DEFAULT_USER_ID}/reviews`],
@@ -117,16 +129,16 @@ export default function Profile() {
   });
 
   // Loading state
-  if (isUserLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (isUserLoading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-gray-50">
+  //       <div className="text-center">
+  //         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+  //         <p className="mt-4 text-gray-600">Loading profile...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Error state
   if (!user) {
@@ -163,19 +175,20 @@ export default function Profile() {
       <div className="gradient-blue h-48 relative">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <h1 className="text-white text-2xl font-bold pt-6">Profile</h1>
-          <div className="flex space-x-2 pt-6">
+          {/* <div className="flex space-x-2 pt-6">
             <button className="bg-white text-primary px-4 py-1 rounded-md font-medium text-sm">Edit Profile</button>
             <button className="bg-transparent text-white border border-white px-4 py-1 rounded-md font-medium text-sm">Dashboard</button>
-          </div>
+          </div> */}
         </div>
       </div>
+
 
       {/* Profile Content */}
       <div className="container mx-auto px-4 -mt-16 pb-20">
         {/* Profile Header */}
         <ProfileHeader 
           user={
-            user
+            user 
           } 
           onEdit={() => setActiveModal('editProfile')}
           onSwitchProfile={handleOpenSwitchProfile}
@@ -275,8 +288,8 @@ export default function Profile() {
                   setSelectedExperience(undefined);
                   setActiveModal('editExperience');
                 }}
-                onEditExperience={(experience) => {
-                  setSelectedExperience(experience);
+                onEditExperience={(experiences) => {
+                  setSelectedExperience(experiences);
                   setActiveModal('editExperience');
                 }}
               />
@@ -307,13 +320,13 @@ export default function Profile() {
             />
 
             {/* Reviews */}
-            <ReviewsSection 
+            {/* <ReviewsSection 
               reviews={reviews}
               onViewAllReviews={() => {
                 // In a real app, this would navigate to a reviews page or show a modal
                 console.log("View all reviews");
               }}
-            />
+            /> */}
           </div>
         </div>
       </div>
@@ -411,7 +424,7 @@ export default function Profile() {
         <CreateProfileModal
           isOpen={true}
           onClose={closeModal}
-          userId={user.id}
+          userId={user.userId}
         />
       )}
     </div>

@@ -2,12 +2,17 @@ import { useState } from "react";
 import { Button } from "../ui/button";
 import { ImageCarousel } from "../ui/image-carousel";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deletePortfolio } from "../../lib/api";
+import { deletePortfolio} from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import {Portfolio} from "../../lib/types";
+import {PORTFOLIO_IMAGES} from '../../lib/constants'
+
 
 /**
+ * 
+ * 
  * Portfolio Section Component
  * @param {Object} props - Component props
  * @param {Array} props.portfolios - Array of portfolio items
@@ -16,12 +21,20 @@ import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
  * @param {Function} props.onViewDetails - Function to view portfolio details
  * @returns {JSX.Element} Portfolio section
  */
+
+interface PortfolioSectionProps {
+  portfolios: Portfolio[];
+  onAddPortfolio: () => void;
+  onEditPortfolio: (portfolio: Portfolio) => void;
+  onViewDetails: (portfolio: Portfolio) => void;
+}
+
 export default function PortfolioSection({ 
   portfolios, 
   onAddPortfolio, 
   onEditPortfolio,
   onViewDetails
-}) {
+}: PortfolioSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -44,15 +57,15 @@ export default function PortfolioSection({
     },
   });
 
-  const handleDelete = (portfolio, e) => {
+  const handleDelete = (portfolio : Portfolio, e) => {
     e.stopPropagation();
     
     if (confirm("Are you sure you want to delete this portfolio project?")) {
-      deleteMutation.mutate(portfolio.id);
+      deleteMutation.mutate(portfolio.portfolioId);
     }
   };
 
-  const handleEdit = (portfolio, e) => {
+  const handleEdit = (portfolio  : Portfolio, e) => {
     e.stopPropagation();
     onEditPortfolio(portfolio);
   };
@@ -85,15 +98,15 @@ export default function PortfolioSection({
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {portfolios.map((portfolio) => (
             <div 
-              key={portfolio.id} 
+              key={portfolio.portfolioId} 
               className="card-shadow rounded-lg overflow-hidden card-hover transition-all duration-300 cursor-pointer"
               onClick={() => onViewDetails(portfolio)}
             >
               <div className="relative">
                 <ImageCarousel 
-                  images={portfolio.images || []}
+                  images={portfolio.imageUrl || []}
                   className="h-40"
-                  alt={portfolio.title}
+                  alt={portfolio.sampleProjectTitle}
                 />
                 
                 <div className="absolute top-2 right-2 flex space-x-1">
@@ -115,24 +128,24 @@ export default function PortfolioSection({
               </div>
               
               <div className="p-3">
-                <h4 className="font-bold text-gray-800 text-base truncate">{portfolio.title}</h4>
-                <p className="text-gray-600 mt-1 text-xs line-clamp-2">{portfolio.description}</p>
+                <h4 className="font-bold text-gray-800 text-base truncate">{portfolio.sampleProjectTitle}</h4>
+                <p className="text-gray-600 mt-1 text-xs line-clamp-2">{portfolio.sampleProjectDescription}</p>
                 
-                <div className="mt-2">
+                {/* <div className="mt-2">
                   <div className="flex flex-wrap gap-1 mb-2">
-                    {portfolio.technologies.slice(0, 3).map((tech, index) => (
-                      <span key={index} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{tech}</span>
+                    {portfolio.skillName.slice(0, 3).map((skill, index) => (
+                      <span key={index} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{skill}</span>
                     ))}
-                    {portfolio.technologies.length > 3 && (
-                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">+{portfolio.technologies.length - 3}</span>
+                    {portfolio.skillName.length > 3 && (
+                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">+{portfolio.skillName.length - 3}</span>
                     )}
                   </div>
-                </div>
+                </div> */}
                 
                 <div className="mt-2 flex justify-between items-center">
                   <div>
                     <span className="text-gray-500 text-xs">
-                      {format(new Date(portfolio.completedDate), 'MMM yyyy')}
+                      {format(new Date(portfolio.completionDate), 'MMM yyyy')}
                     </span>
                   </div>
                   <Button 

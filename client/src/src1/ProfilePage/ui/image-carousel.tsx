@@ -14,7 +14,7 @@ interface ImageCarouselProps {
 
 export function ImageCarousel({
   images,
-  autoSlideInterval = 5000,
+  autoSlideInterval = 1500,
   className,
   imageClassName,
   showControls = true,
@@ -26,7 +26,13 @@ export function ImageCarousel({
   const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const slideCount = images.length;
+  images = Array.isArray(images) ? images : [];
 
+  if (!Array.isArray(images)) {
+    console.error("ImageCarousel expects 'images' to be an array, but received:", images);
+    return null;
+  }
+  
   const resetAutoPlayTimeout = useCallback(() => {
     if (autoPlayTimeoutRef.current) {
       clearTimeout(autoPlayTimeoutRef.current);
@@ -92,7 +98,7 @@ export function ImageCarousel({
       <div className="h-full">
         {images.map((image, index) => (
           <div
-            key={index}
+          key={`${image}-${index}`}
             className={cn(
               "absolute inset-0 transition-opacity duration-500 ease-in-out",
               index === currentIndex ? "opacity-100" : "opacity-0"
@@ -139,7 +145,7 @@ export function ImageCarousel({
         <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
           {images.map((_, index) => (
             <button
-              key={index}
+            key={`indicator-${index}`}
               className={cn(
                 "w-2 h-2 rounded-full",
                 index === currentIndex ? "bg-white" : "bg-white bg-opacity-50"

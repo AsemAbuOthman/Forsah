@@ -88,7 +88,7 @@ export default function HomeHeader() {
     return (
         <>
             <header className="container md:flex justify-center items-center  relative top-0 w-full  m-auto p-2 py-6  md:py-15 z-1000">
-                <div className="flex justify-evenly items-center bg-white px-5 md:px-10 md:h-18  h-15 rounded-full shadow-[1px_0px_10px_1px_rgba(0,0,0,0.4)] md:fixed ">
+                <div className="flex justify-evenly items-center bg-white px-5 md:px-10 md:h-18  h-15 rounded-full shadow-[1px_0px_10px_1px_rgba(0,0,0,0.3)] md:fixed ">
 
                     <div className="hidden md:block md:pr-15">
                         <a href="/">

@@ -17,7 +17,7 @@ export function ViewPortfolioModal({ portfolio, isOpen, onClose, onEdit }: ViewP
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="text-2xl font-bold">{portfolio.title}</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">{portfolio.sampleProjectTitle}</DialogTitle>
           <div className="flex space-x-2">
             <Button 
               variant="outline" 
@@ -42,9 +42,9 @@ export function ViewPortfolioModal({ portfolio, isOpen, onClose, onEdit }: ViewP
           {/* Project Images Carousel */}
           <div className="mb-6">
             <ImageCarousel 
-              images={portfolio.images || []}
+              images={portfolio.imageUrl || []}
               className="h-[400px] rounded-lg"
-              alt={portfolio.title}
+              alt={portfolio.sampleProjectTitle}
             />
           </div>
           
@@ -52,7 +52,7 @@ export function ViewPortfolioModal({ portfolio, isOpen, onClose, onEdit }: ViewP
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-800">Description</h3>
-              <p className="text-gray-700 mt-1">{portfolio.description}</p>
+              <p className="text-gray-700 mt-1">{portfolio.sampleProjectDescription}</p>
             </div>
             
             <div>
@@ -70,7 +70,7 @@ export function ViewPortfolioModal({ portfolio, isOpen, onClose, onEdit }: ViewP
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">Completed</h3>
                 <p className="text-gray-700">
-                  {format(new Date(portfolio.completedDate), 'MMMM d, yyyy')}
+                  {format(new Date(portfolio.completionDate), 'MMMM d, yyyy')}
                 </p>
               </div>
               

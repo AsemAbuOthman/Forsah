@@ -5,6 +5,7 @@ import { deleteCertification } from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { PlusIcon, EyeIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import {CERTIFICATE_IMAGES} from '../../lib/constants'
 
 interface CertificationsSectionProps {
   certifications: Certification[];
@@ -80,23 +81,23 @@ export default function CertificationsSection({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {certifications.map((certification) => (
             <div 
-              key={certification.id} 
+              key={certification.certificationId} 
               className="border border-gray-200 rounded-lg p-4 relative hover:border-blue-300 transition-all card-hover"
             >
               <div className="flex">
-                <div className="flex-shrink-0 mr-3">
+                <div className="flex-shrink-0 mr-3 mt-10">
                   <img 
-                    src={certification.certificateImage || ''} 
-                    alt={certification.title} 
+                    src={certification.certificateImage || CERTIFICATE_IMAGES[0]} 
+                    alt={certification.certificationTitle} 
                     className="w-12 h-12 object-contain" 
                   />
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-800">{certification.title}</h4>
-                  <p className="text-gray-600 text-sm">{certification.issuer}</p>
+                  <h4 className="font-medium text-gray-800">{certification.certificationTitle}</h4>
+                  <p className="text-gray-600 text-sm">{certification.certificationOrganization}</p>
                   <p className="text-gray-500 text-xs mt-1">
-                    Issued {formatDate(certification.issueDate)}
-                    {certification.expiryDate && ` · Expires ${formatDate(certification.expiryDate)}`}
+                    Issued {formatDate(certification.startDate)}
+                    {certification.endDate && ` · Expires ${formatDate(certification.endDate)}`}
                   </p>
                 </div>
               </div>
@@ -122,7 +123,7 @@ export default function CertificationsSection({
                   variant="ghost"
                   size="icon"
                   className="text-red-400 hover:text-red-600 h-6 w-6"
-                  onClick={() => handleDelete(certification.id)}
+                  onClick={() => handleDelete(certification.certificationId)}
                 >
                   <Trash2Icon className="h-3 w-3" />
                 </Button>

@@ -9,26 +9,43 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPortfolio, updatePortfolio } from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
 import { DEFAULT_USER_ID, PORTFOLIO_IMAGES, SKILL_CATEGORIES } from "../../lib/constants";
-import { X, PlusIcon, XIcon } from "lucide-react";
+import { X, PlusIcon, XIcon, Loader2 } from "lucide-react";
+import { Portfolio } from "../../lib/types";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { v4 as uuidv4 } from 'uuid';
+import { storage as app} from '../../../services/Firebase';
 
 /**
  * Edit Portfolio Modal Component
  * @param {Object} props - Component props
- * @param {Object} props.portfolio - Portfolio data (undefined for new portfolio)
+ * @param {Portfolio | undefined} props.portfolio - Portfolio data (undefined for new portfolio)
  * @param {boolean} props.isOpen - Whether the modal is open
  * @param {Function} props.onClose - Function to close the modal
  * @returns {JSX.Element} Edit Portfolio Modal
  */
-export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
+export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
+  portfolio?: Portfolio;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
   const isEditing = !!portfolio;
+  const storage = app;
+  const [isUploading, setIsUploading] = useState(false);
   
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    images: [],
+  const [formData, setFormData] = useState<Omit<Portfolio, 'portfolioId' | 'userId' | 'sampleProjectId'>>({
+    sampleProjectTitle: "",
+    sampleProjectDescription: "",
+    imageUrl: [],
+    completionDate: new Date(),
+    sampleProjectUrl: "",
+    sampleProjectSkillId: [],
+    skillId: [],
+    skillName: [],
+    categoryId: [],
+    categoryName: [],
+    imageableId: [],
+    imageableType: "portfolio",
     technologies: [],
-    completedDate: "",
-    projectUrl: ""
   });
 
   const [selectedTechnology, setSelectedTechnology] = useState("");
@@ -36,22 +53,36 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
   useEffect(() => {
     if (portfolio) {
       setFormData({
-        title: portfolio.title,
-        description: portfolio.description,
-        images: portfolio.images || [],
+        sampleProjectTitle: portfolio.sampleProjectTitle,
+        sampleProjectDescription: portfolio.sampleProjectDescription,
+        imageUrl: portfolio.imageUrl || [],
+        completionDate: portfolio.completionDate,
+        sampleProjectUrl: portfolio.sampleProjectUrl || "",
+        sampleProjectSkillId: portfolio.sampleProjectSkillId || [],
+        skillId: portfolio.skillId || [],
+        skillName: portfolio.skillName || [],
+        categoryId: portfolio.categoryId || [],
+        categoryName: portfolio.categoryName || [],
+        imageableId: portfolio.imageableId || [],
+        imageableType: portfolio.imageableType || "portfolio",
         technologies: portfolio.technologies || [],
-        completedDate: portfolio.completedDate ? new Date(portfolio.completedDate).toISOString().split('T')[0] : "",
-        projectUrl: portfolio.projectUrl || ""
       });
     } else {
       // Default values for new portfolio
       setFormData({
-        title: "",
-        description: "",
-        images: [PORTFOLIO_IMAGES[0]],
+        sampleProjectTitle: "",
+        sampleProjectDescription: "",
+        imageUrl: [PORTFOLIO_IMAGES[0]],
+        completionDate: new Date(),
+        sampleProjectUrl: "",
+        sampleProjectSkillId: [],
+        skillId: [],
+        skillName: [],
+        categoryId: [],
+        categoryName: [],
+        imageableId: [],
+        imageableType: "portfolio",
         technologies: [],
-        completedDate: new Date().toISOString().split('T')[0],
-        projectUrl: ""
       });
     }
   }, [portfolio, isOpen]);
@@ -61,9 +92,9 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
   
   // Create or update portfolio mutation
   const portfolioMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: (data: Omit<Portfolio, 'portfolioId' | 'userId' | 'sampleProjectId'>) => {
       if (isEditing && portfolio) {
-        return updatePortfolio(portfolio.id, data);
+        return updatePortfolio(portfolio.portfolioId, data);
       } else {
         return createPortfolio({
           ...data,
@@ -89,7 +120,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
     },
   });
   
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -104,18 +135,18 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
     }
   };
   
-  const handleRemoveTechnology = (tech) => {
+  const handleRemoveTechnology = (tech: string) => {
     setFormData((prev) => ({
       ...prev,
       technologies: prev.technologies.filter(t => t !== tech)
     }));
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Ensure we have at least one image
-    if (formData.images.length === 0) {
+    if (formData.imageUrl.length === 0) {
       toast({
         title: "Image required",
         description: "Please add at least one image for your portfolio.",
@@ -127,33 +158,60 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
     portfolioMutation.mutate(formData);
   };
   
-  // Handle file upload from user's device
-  const handleFileUpload = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
+  // Handle file upload to Firebase Storage
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const files = Array.from(e.target.files);
+    
+    // Check if adding these files would exceed the limit of 5 images
+    if (formData.imageUrl.length + files.length > 5) {
+      toast({
+        title: "Too many images",
+        description: `You can only upload a maximum of 5 images. You currently have ${formData.imageUrl.length}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsUploading(true);
+    
+    try {
+      const uploadPromises = files.map(async (file) => {
+        // Generate a unique filename using UUID
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExtension}`;
+        const storageRef = ref(storage, `portfolio-images/${fileName}`);
+        
+        // Upload the file
+        await uploadBytes(storageRef, file);
+        
+        // Get the download URL
+        return getDownloadURL(storageRef);
+      });
       
-      // Check if adding these files would exceed the limit of 5 images
-      if (formData.images.length + files.length > 5) {
-        toast({
-          title: "Too many images",
-          description: `You can only upload a maximum of 5 images. You currently have ${formData.images.length}.`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Create object URLs for the selected files
-      const newImageUrls = files.map(file => URL.createObjectURL(file));
+      // Wait for all uploads to complete
+      const newImageUrls = await Promise.all(uploadPromises);
       
       setFormData((prev) => ({
         ...prev,
-        images: [...prev.images, ...newImageUrls]
+        imageUrl: [...prev.imageUrl, ...newImageUrls]
       }));
+      
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "Upload failed",
+        description: "There was an error uploading your images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
   
   // Create a hidden file input that will be triggered by our custom button
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleAddImage = () => {
     // Trigger the hidden file input
@@ -162,16 +220,20 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
     }
   };
   
-  const handleRemoveImage = (imageUrl) => {
+  const handleRemoveImage = (imageUrl: string) => {
     setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter(img => img !== imageUrl)
+      imageUrl: prev.imageUrl.filter(img => img !== imageUrl)
     }));
   };
 
   // Flatten all technology options from skill categories
   const allTechnologies = SKILL_CATEGORIES.flatMap(category => 
-    category.options.map(option => option)
+    category.options.map(option => ({
+      value: option.value,
+      label: option.label,
+      category: category.name // Added category information
+    }))
   );
   
   return (
@@ -198,25 +260,26 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
             className="hidden"
             accept="image/*"
             multiple
+            disabled={isUploading}
           />
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">Project Title</Label>
+              <Label htmlFor="sampleProjectTitle">Project Title</Label>
               <Input
-                id="title"
-                name="title"
-                value={formData.title}
+                id="sampleProjectTitle"
+                name="sampleProjectTitle"
+                value={formData.sampleProjectTitle}
                 onChange={handleChange}
                 required
               />
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="sampleProjectDescription">Description</Label>
               <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
+                id="sampleProjectDescription"
+                name="sampleProjectDescription"
+                value={formData.sampleProjectDescription}
                 onChange={handleChange}
                 rows={4}
                 required
@@ -226,7 +289,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
             <div className="grid gap-2">
               <Label>Images</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-2">
-                {formData.images.map((image, index) => (
+                {formData.imageUrl.map((image, index) => (
                   <div key={index} className="relative bg-gray-100 rounded-md overflow-hidden h-28">
                     <img 
                       src={image} 
@@ -239,25 +302,37 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
                       className="absolute top-1 right-1 h-5 w-5 rounded-full"
                       onClick={() => handleRemoveImage(image)}
                       type="button"
+                      disabled={isUploading}
                     >
                       <XIcon className="h-3 w-3" />
                     </Button>
                   </div>
                 ))}
                 
-                {formData.images.length < 5 && (
+                {formData.imageUrl.length < 5 && (
                   <div
-                    className="border-2 border-dashed border-gray-300 rounded-md h-28 flex items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                    onClick={handleAddImage}
+                    className={`border-2 border-dashed rounded-md h-28 flex items-center justify-center cursor-pointer ${
+                      isUploading 
+                        ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+                        : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+                    }`}
+                    onClick={!isUploading ? handleAddImage : undefined}
                   >
-                    <div className="text-gray-500 text-center">
-                      <PlusIcon className="h-6 w-6 mx-auto mb-1" />
-                      <div className="text-xs">Add Image</div>
-                    </div>
+                    {isUploading ? (
+                      <div className="text-gray-500 text-center">
+                        <Loader2 className="h-6 w-6 mx-auto mb-1 animate-spin" />
+                        <div className="text-xs">Uploading...</div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-center">
+                        <PlusIcon className="h-6 w-6 mx-auto mb-1" />
+                        <div className="text-xs">Add Image</div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500">You can add up to 5 images. In a real application, this would allow file uploads.</p>
+              <p className="text-xs text-gray-500">You can add up to 5 images (Max 5MB each)</p>
             </div>
             
             <div className="grid gap-2">
@@ -295,7 +370,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
                   type="button" 
                   className="gradient-blue text-white"
                   onClick={handleAddTechnology}
-                  disabled={!selectedTechnology}
+                  disabled={!selectedTechnology || isUploading}
                 >
                   Add
                 </Button>
@@ -303,24 +378,29 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="completedDate">Completion Date</Label>
+              <Label htmlFor="completionDate">Completion Date</Label>
               <Input
-                id="completedDate"
-                name="completedDate"
+                id="completionDate"
+                name="completionDate"
                 type="date"
-                value={formData.completedDate}
-                onChange={handleChange}
+                value={formData.completionDate ? new Date(formData.completionDate).toISOString().split('T')[0] : ""}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    completionDate: new Date(e.target.value)
+                  }));
+                }}
                 required
               />
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="projectUrl">Project URL (optional)</Label>
+              <Label htmlFor="sampleProjectUrl">Project URL (optional)</Label>
               <Input
-                id="projectUrl"
-                name="projectUrl"
+                id="sampleProjectUrl"
+                name="sampleProjectUrl"
                 type="url"
-                value={formData.projectUrl}
+                value={formData.sampleProjectUrl}
                 onChange={handleChange}
                 placeholder="https://example.com"
               />
@@ -328,17 +408,25 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }) {
           </div>
           
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+              disabled={portfolioMutation.isPending || isUploading}
+            >
               Cancel
             </Button>
             <Button 
               type="submit" 
               className="gradient-blue text-white"
-              disabled={portfolioMutation.isPending}
+              disabled={portfolioMutation.isPending || isUploading}
             >
-              {portfolioMutation.isPending 
-                ? (isEditing ? "Updating..." : "Creating...") 
-                : (isEditing ? "Update Project" : "Create Project")}
+              {portfolioMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {isEditing ? "Updating..." : "Creating..."}
+                </>
+              ) : isEditing ? "Update Project" : "Create Project"}
             </Button>
           </DialogFooter>
         </form>

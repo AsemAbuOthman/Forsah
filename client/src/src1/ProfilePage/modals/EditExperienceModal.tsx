@@ -23,22 +23,22 @@ export function EditExperienceModal({ experience, isOpen, onClose }: EditExperie
   const [currentlyWorking, setCurrentlyWorking] = useState(false);
   
   const [formData, setFormData] = useState({
-    title: "",
-    company: "",
+    experienceTitle: "",
+    experienceCompanyName: "",
     startDate: "",
     endDate: "",
-    description: "",
+    experienceDescription: "",
     current: false
   });
 
   useEffect(() => {
     if (experience) {
       setFormData({
-        title: experience.title,
-        company: experience.company,
+        experienceTitle: experience.experienceTitle,
+        experienceCompanyName: experience.experienceCompanyName,
         startDate: experience.startDate ? new Date(experience.startDate).toISOString().split('T')[0] : "",
         endDate: experience.endDate ? new Date(experience.endDate).toISOString().split('T')[0] : "",
-        description: experience.description || "",
+        experienceDescription: experience.experienceDescription || "",
         current: experience.current
       });
       setCurrentlyWorking(experience.current);
@@ -46,11 +46,11 @@ export function EditExperienceModal({ experience, isOpen, onClose }: EditExperie
       // Default values for new experience
       const today = new Date().toISOString().split('T')[0];
       setFormData({
-        title: "",
-        company: "",
+        experienceTitle: "",
+        experienceCompanyName: "",
         startDate: "",
         endDate: today,
-        description: "",
+        experienceDescription: "",
         current: false
       });
       setCurrentlyWorking(false);
@@ -64,7 +64,7 @@ export function EditExperienceModal({ experience, isOpen, onClose }: EditExperie
   const experienceMutation = useMutation({
     mutationFn: (data: Partial<Experience>) => {
       if (isEditing && experience) {
-        return updateExperience(experience.id, data);
+        return updateExperience(experience.experienceId, data);
       } else {
         return createExperience({
           ...data as any,
@@ -126,11 +126,11 @@ export function EditExperienceModal({ experience, isOpen, onClose }: EditExperie
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title">Job Title</Label>
+              <Label htmlFor="experienceTitle">Job Title</Label>
               <Input
-                id="title"
-                name="title"
-                value={formData.title}
+                id="experienceTitle"
+                name="experienceTitle"
+                value={formData.experienceTitle}
                 onChange={handleChange}
                 placeholder="e.g. Senior Full Stack Developer"
                 required
@@ -138,11 +138,11 @@ export function EditExperienceModal({ experience, isOpen, onClose }: EditExperie
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="company">Company</Label>
+              <Label htmlFor="experienceCompanyName">Company</Label>
               <Input
-                id="company"
-                name="company"
-                value={formData.company}
+                id="experienceCompanyName"
+                name="experienceCompanyName"
+                value={formData.experienceCompanyName}
                 onChange={handleChange}
                 placeholder="e.g. Acme Inc."
                 required
@@ -199,11 +199,11 @@ export function EditExperienceModal({ experience, isOpen, onClose }: EditExperie
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="experienceDescription">Description</Label>
               <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
+                id="experienceDescription"
+                name="experienceDescription"
+                value={formData.experienceDescription}
                 onChange={handleChange}
                 rows={4}
                 placeholder="Describe your responsibilities, achievements, and projects..."

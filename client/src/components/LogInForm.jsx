@@ -78,30 +78,32 @@ export default function LogInForm() {
 
         try {
             const res = await axios.post('/api/login', formData);
-    
-            if (res.data) {
+            console.log("Login response data:", res.data); // Add this
+        
+            const user = res.data?.user;
+            
+            if (user && Object.keys(user).length > 0) {
                 if (rememberMe) {
                     localStorage.setItem('authData', JSON.stringify(formData));
                 } else {
                     localStorage.removeItem('authData');
                 }
-
-                setUserData(res.data);
+        
+                setUserData(user);
                 toast.success("Login successful!");
                 navigate('/dashboard');
+            } else {
+                toast.error("Invalid email or password");
             }
         } catch (err) {
             console.error(err);
-            if (err.response) {
-                if (err.response.status === 401) {
-                    toast.error("Invalid email or password");
-                } else {
-                    toast.error("Login failed. Please try again later.");
-                }
+            if (err.response?.status === 401) {
+                toast.error("Invalid email or password");
             } else {
-                toast.error("Network error. Please check your connection.");
+                toast.error("Login failed. Please try again later.");
             }
-        } finally {
+        }
+        finally {
             setIsLoading(false);
         }
     };

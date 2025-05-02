@@ -23,32 +23,32 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
   const [currentlyStudying, setCurrentlyStudying] = useState(false);
   
   const [formData, setFormData] = useState({
-    degree: "",
-    institution: "",
-    startYear: "",
-    endYear: "",
-    description: ""
+    educationDegree: "",
+    educationOrganization: "",
+    startDate: "",
+    endDate: "",
+    educationDescription: ""
   });
 
   useEffect(() => {
     if (education) {
       setFormData({
-        degree: education.degree,
-        institution: education.institution,
-        startYear: education.startYear,
-        endYear: education.endYear || "",
-        description: education.description || ""
+        educationDegree: education.educationDegree,
+        educationOrganization: education.educationOrganization,
+        startDate: education.startDate,
+        endDate: education.endDate || "",
+        educationDescription: education.educationDescription || ""
       });
-      setCurrentlyStudying(!education.endYear);
+      setCurrentlyStudying(!education.endDate);
     } else {
       // Default values for new education
       const currentYear = new Date().getFullYear().toString();
       setFormData({
-        degree: "",
-        institution: "",
-        startYear: "",
-        endYear: currentYear,
-        description: ""
+        educationDegree: "",
+        educationOrganization: "",
+        startDate: "",
+        endDate: currentYear,
+        educationDescription: ""
       });
       setCurrentlyStudying(false);
     }
@@ -61,7 +61,7 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
   const educationMutation = useMutation({
     mutationFn: (data: Partial<Education>) => {
       if (isEditing && education) {
-        return updateEducation(education.id, data);
+        return updateEducation(education.educationId, data);
       } else {
         return createEducation({
           ...data as any,
@@ -98,7 +98,7 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
     // Prepare data for submission
     const educationData: Partial<Education> = {
       ...formData,
-      endYear: currentlyStudying ? undefined : formData.endYear
+      endDate: currentlyStudying ? undefined : formData.endDate
     };
     
     educationMutation.mutate(educationData);
@@ -126,11 +126,11 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="degree">Degree / Field of Study</Label>
+              <Label htmlFor="educationDegree">Degree / Field of Study</Label>
               <Input
-                id="degree"
-                name="degree"
-                value={formData.degree}
+                id="educationDegree"
+                name="educationDegree"
+                value={formData.educationDegree}
                 onChange={handleChange}
                 placeholder="e.g. Bachelor of Computer Science"
                 required
@@ -138,11 +138,11 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="institution">Institution</Label>
+              <Label htmlFor="educationOrganization">Institution</Label>
               <Input
-                id="institution"
-                name="institution"
-                value={formData.institution}
+                id="educationOrganization"
+                name="educationOrganization"
+                value={formData.educationOrganization}
                 onChange={handleChange}
                 placeholder="e.g. University of California, Berkeley"
                 required
@@ -151,11 +151,11 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
             
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="startYear">Start Year</Label>
+                <Label htmlFor="startDate">Start Year</Label>
                 <select
-                  id="startYear"
-                  name="startYear"
-                  value={formData.startYear}
+                  id="startDate"
+                  name="startDate"
+                  value={formData.startDate}
                   onChange={handleChange as any}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
@@ -171,14 +171,14 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
               
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="endYear" className={currentlyStudying ? "text-gray-400" : ""}>
+                  <Label htmlFor="endDate" className={currentlyStudying ? "text-gray-400" : ""}>
                     End Year
                   </Label>
                 </div>
                 <select
-                  id="endYear"
-                  name="endYear"
-                  value={formData.endYear}
+                  id="endDate"
+                  name="endDate"
+                  value={formData.endDate}
                   onChange={handleChange as any}
                   className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${currentlyStudying ? "bg-gray-100" : ""}`}
                   disabled={currentlyStudying}
@@ -211,11 +211,11 @@ export function EditEducationModal({ education, isOpen, onClose }: EditEducation
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="description">Description (Optional)</Label>
+              <Label htmlFor="educationDescription">Description (Optional)</Label>
               <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
+                id="educationDescription"
+                name="educationDescription"
+                value={formData.educationDescription}
                 onChange={handleChange}
                 rows={4}
                 placeholder="Describe your achievements, activities, awards, etc."

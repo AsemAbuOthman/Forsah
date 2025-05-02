@@ -1,26 +1,42 @@
 // Type definitions for the frontend application
 
 export interface User {
-  id: number;
+  userId: number;
   username: string;
-  fullName: string;
-  title: string;
-  location: string;
-  about: string;
-  avatar: string;
-  rating: string;
-  completedProjects: number;
-  responseTime: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  locationUrl: string;
+  companyName: string;
+  languageId: number;
+  currencyId: number;
+  countryId: number;
+  zipCode: number;
+  city: string;
+  dateOfBirth: Date;
+  isActive: boolean;
+  roleId: number;
+  createdAt: Date;
+  language: string;
+  symbol: string;
+  countryName: string;
+  profileId: number;
+  profileDescription: string;
+  imageId: number;
+  imageUrl: string;
+  phone: number;
   profileType?: 'freelancer' | 'client';
-  isActiveProfile?: boolean;
-  parentUserId?: number;
+  professionalTitle: string;
 }
 
 export interface Skill {
-  id: number;
+  userSkillId: number;
   userId: number;
-  category: string;
-  name: string;
+  categoryName: string;
+  categoryDescription: string;
+  categoryId: number;
+  skillName: string;
+  skillId: string;
   level: "Beginner" | "Intermediate" | "Expert";
 }
 
@@ -29,47 +45,63 @@ export interface PortfolioImage {
   alt: string;
 }
 
+//portfolioId	userId	sampleProjectId	portfolioId	sampleProjectTitle	sampleProjectDescription	completionDate	sampleProjectUrl	sampleProjectSkillId	sampleProjectId	skillId	imageId	imageUrl	imageableId	imageableType	createdAt	skillId	categoryId	skillName
 export interface Portfolio {
-  id: number;
+  portfolioId: number;
+  sampleProjectId: number;
   userId: number;
-  title: string;
-  description: string;
-  images: string[];
+  sampleProjectTitle: string;
+  sampleProjectDescription: string;
+  imageUrl: string[];
+  completionDate: Date; // ISO date string
+  sampleProjectUrl: string; // ISO date string
+  sampleProjectSkillId: number[]  ; // ISO date string
+  skillId: number[]; // ISO date string
+  skillName: string[]; // ISO date string
+  categoryId: number[]; // ISO date string
+  categoryName: string[]; // ISO date string
+  imageableId: number[]; // ISO date string
+  imageableType: string; // ISO date string
   technologies: string[];
-  completedDate: string; // ISO date string
   projectUrl?: string;
 }
 
-export interface Certification {
-  id: number;
-  userId: number;
-  title: string;
-  issuer: string;
-  issueDate: string; // ISO date string
-  expiryDate?: string; // ISO date string
-  certificateImage?: string;
-  certificateUrl?: string;
-}
+// certificationId	userId	certificationTitle	certificationOrganization	startDate	endDate	certificationUrl
 
-export interface Experience {
-  id: number;
+export interface Certification {
+  certificationId: number;
   userId: number;
-  title: string;
-  company: string;
+  certificationTitle: string;
+  certificationOrganization: string;
   startDate: string; // ISO date string
   endDate?: string; // ISO date string
-  description?: string;
+  certificateImage?: string;
+  certificationUrl?: string;
+}
+
+// experienceId	userId	experienceTitle	experienceDescription	experienceCompanyName	countryId	startDate	endDate
+
+export interface Experience {
+  experienceId: number;
+  userId: number;
+  experienceTitle: string;
+  experienceCompanyName: string;
+  startDate: string; // ISO date string
+  endDate?: string; // ISO date string
+  experienceDescription?: string;
   current: boolean;
 }
 
+// educationId	userId	educationDegree	educationOrganization	startDate	endDate	countryId educationDescription
+
 export interface Education {
-  id: number;
+  educationId: number;
   userId: number;
-  degree: string;
-  institution: string;
-  startYear: string;
-  endYear?: string;
-  description?: string;
+  educationDegree: string;
+  educationOrganization: string;
+  startDate: string;
+  endDate?: string;
+  educationDescription?: string;
 }
 
 export interface Review {
@@ -83,14 +115,14 @@ export interface Review {
 }
 
 // Skill categories and options
-export interface SkillCategory {
-  name: string;
-  options: SkillOption[];
-}
-
 export interface SkillOption {
   value: string;
   label: string;
+}
+
+export interface SkillCategory {
+  name: string;
+  options: SkillOption[];
 }
 
 // Modal types

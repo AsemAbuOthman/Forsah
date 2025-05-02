@@ -11,10 +11,10 @@ interface SkillsSectionProps {
 export default function SkillsSection({ skills, onEditSkills }: SkillsSectionProps) {
   // Group skills by category
   const groupedSkills = skills.reduce((acc: Record<string, Skill[]>, skill) => {
-    if (!acc[skill.category]) {
-      acc[skill.category] = [];
+    if (!acc[skill.categoryName]) {
+      acc[skill.categoryName] = [];
     }
-    acc[skill.category].push(skill);
+    acc[skill.categoryName].push(skill);
     return acc;
   }, {});
 
@@ -55,19 +55,16 @@ export default function SkillsSection({ skills, onEditSkills }: SkillsSectionPro
         <div className="space-y-4">
           {Object.entries(groupedSkills).map(([category, categorySkills]) => (
             <div key={category}>
-              <h4 className="font-medium text-gray-700 mb-2">{category}</h4>
-              <div className="flex flex-wrap gap-2">
+              <h4 className="font-medium text-gray-700 mb-2 ">{category}</h4>
+              <div className="flex flex-wrap gap-2 ">
                 {categorySkills.map((skill) => {
                   const colorClasses = getCategoryColorClasses(category);
                   return (
                     <span 
-                      key={skill.id} 
-                      className={`px-3 py-1.5 ${colorClasses.container} rounded-full text-sm flex items-center`}
+                      key={skill.skillId} 
+                      className={`px-3 py-1.5 ${colorClasses.container} rounded-full text-sm flex items-end`}
                     >
-                      {skill.name}
-                      <span className={`ml-1 ${colorClasses.badge} text-xs px-1.5 rounded-full`}>
-                        {skill.level}
-                      </span>
+                      {skill.skillName}
                     </span>
                   );
                 })}

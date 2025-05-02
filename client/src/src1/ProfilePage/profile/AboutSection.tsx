@@ -22,7 +22,7 @@ export default function AboutSection({ user, onEdit }: AboutSectionProps) {
         </Button>
       </div>
       <p className="text-gray-700">
-        {user.about || "No information provided yet."}
+        {user.profileDescription || "No information provided yet."}
       </p>
     </div>
   );

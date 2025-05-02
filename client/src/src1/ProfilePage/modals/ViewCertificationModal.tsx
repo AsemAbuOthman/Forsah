@@ -3,6 +3,7 @@ import { Button } from "../ui/button";
 import { Certification } from "../../lib/types";
 import { format } from "date-fns";
 import { X, ExternalLink, PencilIcon } from "lucide-react";
+import {CERTIFICATE_IMAGES} from '../../lib/constants'
 
 interface ViewCertificationModalProps {
   certification: Certification;
@@ -20,7 +21,7 @@ export function ViewCertificationModal({ certification, isOpen, onClose, onEdit 
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[650px]">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle className="text-2xl font-bold">{certification.title}</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">{certification.certificationTitle}</DialogTitle>
           <div className="flex space-x-2">
             <Button 
               variant="outline" 
@@ -44,8 +45,8 @@ export function ViewCertificationModal({ certification, isOpen, onClose, onEdit 
         <div className="mt-2">
           <div className="flex items-center justify-center mb-6">
             <img 
-              src={certification.certificateImage} 
-              alt={certification.title} 
+              src={CERTIFICATE_IMAGES[0]} 
+              alt={certification.certificationTitle} 
               className="max-h-[300px] object-contain rounded-md" 
             />
           </div>
@@ -53,30 +54,30 @@ export function ViewCertificationModal({ certification, isOpen, onClose, onEdit 
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-800">Issuing Organization</h3>
-              <p className="text-gray-700 mt-1">{certification.issuer}</p>
+              <p className="text-gray-700 mt-1">{certification.certificationOrganization}</p>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">Issue Date</h3>
                 <p className="text-gray-700">
-                  {formatDate(certification.issueDate)}
+                  {formatDate(certification.startDate)}
                 </p>
               </div>
               
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">Expiry Date</h3>
                 <p className="text-gray-700">
-                  {certification.expiryDate ? formatDate(certification.expiryDate) : 'No Expiration'}
+                  {certification.endDate ? formatDate(certification.endDate) : 'No Expiration'}
                 </p>
               </div>
             </div>
             
-            {certification.certificateUrl && (
+            {certification.certificationUrl && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">Certificate URL</h3>
                 <a 
-                  href={certification.certificateUrl} 
+                  href={certification.certificationUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800 flex items-center"

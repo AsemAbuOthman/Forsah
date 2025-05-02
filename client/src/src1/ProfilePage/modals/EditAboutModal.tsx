@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
@@ -8,6 +8,7 @@ import { updateUserProfile } from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
 import { User } from "../../lib/types";
 import { X } from "lucide-react";
+import { UserContext } from "../../../store/UserProvider";
 
 interface EditAboutModalProps {
   user: User;
@@ -16,17 +17,21 @@ interface EditAboutModalProps {
 }
 
 export function EditAboutModal({ user, isOpen, onClose }: EditAboutModalProps) {
-  const [about, setAbout] = useState(user.about || "");
+  const [about, setAbout] = useState(user.profileDescription || "");
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+  const [userData, setUserData] = useContext(UserContext);
+
+
   const updateAboutMutation = useMutation({
     mutationFn: (aboutText: string) => {
-      return updateUserProfile(user.id, { about: aboutText });
+
+      setUserData(updateUserProfile(user.userId, { profileDescription: aboutText }));
+      return userData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
       toast({
         title: "About section updated",
         description: "Your about section has been updated successfully.",
