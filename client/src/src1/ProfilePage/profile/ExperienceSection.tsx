@@ -1,5 +1,5 @@
 import { Experience } from "../../lib/types";
-import { Button } from "..//ui/button";
+import { Button } from "../ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteExperience } from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
@@ -8,12 +8,14 @@ import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
 
 interface ExperienceSectionProps {
   experiences: Experience[];
-  onAddExperience: () => void;
-  onEditExperience: (experience: Experience) => void;
+  isEditable?: boolean;
+  onAddExperience?: () => void;
+  onEditExperience?: (experience: Experience) => void;
 }
 
 export default function ExperienceSection({ 
   experiences, 
+  isEditable = false, 
   onAddExperience, 
   onEditExperience 
 }: ExperienceSectionProps) {
@@ -67,25 +69,29 @@ export default function ExperienceSection({
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-800">Work Experience</h3>
-        <Button 
-          className="text-white gradient-orange"
-          onClick={onAddExperience}
-        >
-          <PlusIcon className="h-4 w-4 mr-1" />
-          Add Experience
-        </Button>
+        {isEditable && onAddExperience && (
+          <Button 
+            className="text-white gradient-orange"
+            onClick={onAddExperience}
+          >
+            <PlusIcon className="h-4 w-4 mr-1" />
+            Add Experience
+          </Button>
+        )}
       </div>
       
       {experiences.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
           <div className="text-gray-500">No work experience yet</div>
-          <Button 
-            className="mt-4 text-white gradient-orange"
-            onClick={onAddExperience}
-          >
-            <PlusIcon className="h-4 w-4 mr-1" />
-            Add Your First Experience
-          </Button>
+          {isEditable && onAddExperience && (
+            <Button 
+              className="mt-4 text-white gradient-orange"
+              onClick={onAddExperience}
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add Your First Experience
+            </Button>
+          )}
         </div>
       ) : (
         <div className="relative pl-6 before:content-[''] before:absolute before:left-1 before:top-2 before:bottom-6 before:w-0.5 before:bg-gray-200">
@@ -102,22 +108,26 @@ export default function ExperienceSection({
                     </p>
                   </div>
                   <div className="flex items-start space-x-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-gray-400 hover:text-gray-600 h-6 w-6"
-                      onClick={() => onEditExperience(experience)}
-                    >
-                      <PencilIcon className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-400 hover:text-red-600 h-6 w-6"
-                      onClick={() => handleDelete(experience.experienceId)}
-                    >
-                      <Trash2Icon className="h-3 w-3" />
-                    </Button>
+                    {isEditable && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-400 hover:text-gray-600 h-6 w-6"
+                          onClick={() => onEditExperience?.(experience)}
+                        >
+                          <PencilIcon className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-red-400 hover:text-red-600 h-6 w-6"
+                          onClick={() => handleDelete(experience.experienceId)}
+                        >
+                          <Trash2Icon className="h-3 w-3" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {experience.experienceDescription && (

@@ -27,6 +27,7 @@ export interface User {
   phone: number;
   profileType?: 'freelancer' | 'client';
   professionalTitle: string;
+  hourlyRate: number
 }
 
 export interface Skill {
@@ -52,7 +53,7 @@ export interface Portfolio {
   userId: number;
   sampleProjectTitle: string;
   sampleProjectDescription: string;
-  imageUrl: string[];
+  imageUrl: images;
   completionDate: Date; // ISO date string
   sampleProjectUrl: string; // ISO date string
   sampleProjectSkillId: number[]  ; // ISO date string
@@ -64,6 +65,11 @@ export interface Portfolio {
   imageableType: string; // ISO date string
   technologies: string[];
   projectUrl?: string;
+}
+
+export interface images {
+  imageId: number;
+  imageUrl: string;
 }
 
 // certificationId	userId	certificationTitle	certificationOrganization	startDate	endDate	certificationUrl

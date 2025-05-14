@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Images } from "lucide-react";
 import { cn } from "../../lib/utils";
-
+import{images} from '../../lib/types'
 interface ImageCarouselProps {
-  images: string[];
+  images:  images[];
   autoSlideInterval?: number;
   className?: string;
   imageClassName?: string;
@@ -25,14 +25,14 @@ export function ImageCarousel({
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const autoPlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const slideCount = images.length;
   images = Array.isArray(images) ? images : [];
 
+  const slideCount = images.length;
   if (!Array.isArray(images)) {
     console.error("ImageCarousel expects 'images' to be an array, but received:", images);
     return null;
   }
-  
+
   const resetAutoPlayTimeout = useCallback(() => {
     if (autoPlayTimeoutRef.current) {
       clearTimeout(autoPlayTimeoutRef.current);
@@ -81,36 +81,29 @@ export function ImageCarousel({
     resetAutoPlayTimeout();
   };
 
-  // If there are no images or only one image, don't render controls or indicators
   if (slideCount === 0) {
     return null;
   }
 
   return (
-    <div 
-      className={cn(
-        "relative overflow-hidden bg-gray-100 group",
-        className
-      )}
+    <div
+      className={cn("relative overflow-hidden bg-gray-100 group", className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       <div className="h-full">
         {images.map((image, index) => (
           <div
-          key={`${image}-${index}`}
+            key={image.imageId}
             className={cn(
               "absolute inset-0 transition-opacity duration-500 ease-in-out",
               index === currentIndex ? "opacity-100" : "opacity-0"
             )}
           >
             <img
-              src={image}
+              src={image.imageUrl}
               alt={`${alt} ${index + 1}`}
-              className={cn(
-                "w-full h-full object-cover",
-                imageClassName
-              )}
+              className={cn("w-full h-full object-cover", imageClassName)}
             />
           </div>
         ))}
@@ -145,7 +138,7 @@ export function ImageCarousel({
         <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-1">
           {images.map((_, index) => (
             <button
-            key={`indicator-${index}`}
+              key={`indicator-${index}`}
               className={cn(
                 "w-2 h-2 rounded-full",
                 index === currentIndex ? "bg-white" : "bg-white bg-opacity-50"

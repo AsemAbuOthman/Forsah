@@ -1,254 +1,296 @@
-import { useState, useContext, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useToast } from '../src1/hooks/use-toast';
 import { useGoogleLogin } from '@react-oauth/google';
-import {UserContext} from "../store/UserProvider";
-import { ClipLoader } from 'react-spinners';    
-import { Toaster, toast } from 'react-hot-toast';
+import axios from 'axios';
+import { UserContext } from "../store/UserProvider";
 
-export default function LogInForm() {
-    const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-    const [userData, setUserData] = useContext(UserContext);
-    const [formErrors, setFormErrors] = useState({ email: '', password: '' });
-    const navigate = useNavigate();
+const LogInForm = () => {
+const navigate = useNavigate();
+const { toast } = useToast();
+const [showPassword, setShowPassword] = useState(false);
+const [rememberMe, setRememberMe] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
+const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+const [formErrors, setFormErrors] = useState({ email: '', password: '' });
+const [userData, setUserData] = useContext(UserContext);
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            const authData = localStorage.getItem('authData');
-    
-            if (authData) {
-                try {
-                    setIsLoading(true);
-                    const res = await axios.post('/api/login', JSON.parse(authData));
+useEffect(() => {
+    const checkAuth = async () => {
+    const authData = localStorage.getItem('authData');
 
-                    if (res.data) {
-                        setUserData(res.data); 
-                        toast.success("Welcome back!");
-                        navigate('/dashboard');
-                    }
-                } catch (err) {
-                    console.error('Auto login failed:', err);
-                    localStorage.removeItem('authData');
-                } finally {
-                    setIsLoading(false);
-                }
-            }
-        };  
-    
-        checkAuth();
-    }, [navigate, setUserData]);
-    
-    const validateForm = (formData) => {
-        const errors = {};
-        let isValid = true;
-
-        if (!formData.email) {
-            errors.email = "Email is required";
-            isValid = false;
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            errors.email = "Please enter a valid email address";
-            isValid = false;
-        }
-
-        if (!formData.password) {
-            errors.password = "Password is required";
-            isValid = false;
-        } else if (formData.password.length < 6) {
-            errors.password = "Password must be at least 6 characters";
-            isValid = false;
-        }
-
-        setFormErrors(errors);
-        return isValid;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        
-        const formData = Object.fromEntries(new FormData(e.target).entries());
-        
-        if (!validateForm(formData)) {
-            setIsLoading(false);
-            return;
-        }
-
+    if (authData) {
         try {
-            const res = await axios.post('/api/login', formData);
-            console.log("Login response data:", res.data); // Add this
-        
-            const user = res.data?.user;
-            
-            if (user && Object.keys(user).length > 0) {
-                if (rememberMe) {
-                    localStorage.setItem('authData', JSON.stringify(formData));
-                } else {
-                    localStorage.removeItem('authData');
-                }
-        
-                setUserData(user);
-                toast.success("Login successful!");
-                navigate('/dashboard');
-            } else {
-                toast.error("Invalid email or password");
-            }
+        setIsLoading(true);
+        const res = await axios.post('/api/login', JSON.parse(authData));
+        setUserData(res.data?.user);
+        if (res) {
+            toast({
+            title: "Welcome back!",
+            description: "You have been automatically logged in",
+            });
+            navigate('/dashboard');
+        }
         } catch (err) {
-            console.error(err);
-            if (err.response?.status === 401) {
-                toast.error("Invalid email or password");
-            } else {
-                toast.error("Login failed. Please try again later.");
-            }
+        console.error('Auto login failed:', err);
+        localStorage.removeItem('authData');
+        } finally {
+        setIsLoading(false);
         }
-        finally {
-            setIsLoading(false);
-        }
+    }
     };
 
-    const handleGoogleLogin = useGoogleLogin({
-        onSuccess: async (credentialResponse) => {
-            setIsGoogleLoading(true);
-            try {
-                const response = await axios.post('/api/auth/google', {
-                    token: credentialResponse.access_token
-                });
+    checkAuth();
+}, [navigate, toast]);
 
-                if (response.data) {
-                    setUserData(response.data.user);
-                    localStorage.removeItem('authData'); // Don't store Google auth in local storage
-                    toast.success("Google login successful!");
-                    navigate('/dashboard');
-                }
-            } catch (error) {
-                console.error('Google login error:', error);
-                toast.error("Google login failed. Please try again.");
-            } finally {
-                setIsGoogleLoading(false);
-            }
-        },
-        onError: () => {
-            toast.error("Google login failed. Please try again.");
-            setIsGoogleLoading(false);
-        }
+const validateForm = (formData) => {
+    const errors = {};
+    let isValid = true;
+
+    if (!formData.email) {
+    errors.email = "Email is required";
+    isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    errors.email = "Please enter a valid email address";
+    isValid = false;
+    }
+
+    if (!formData.password) {
+    errors.password = "Password is required";
+    isValid = false;
+    } else if (formData.password.length < 8) {
+    errors.password = "Password must be at least 6 characters";
+    isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+};
+
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const formData = {
+    email: e.target.email.value,
+    password: e.target.password.value
+    };
+    
+    if (!validateForm(formData)) {
+    setIsLoading(false);
+    return;
+    }
+
+    console.log('before login : ', formData);
+
+    try {
+    const res = await axios.post('/api/login', formData);
+    
+    console.log('after login : ', res.data?.user);
+    
+    setUserData(res.data?.user);
+
+    if (rememberMe) {
+        localStorage.setItem('authData', JSON.stringify(formData));
+    } else {
+        localStorage.removeItem('authData');
+    }
+    
+    toast({
+        title: "Success!",
+        description: "You have successfully logged in",
     });
+    
+    navigate('/dashboard');
+    
+    } catch (err) {
+    console.error(err);
+    toast({
+        title: "Error",
+        description: "Invalid email or password",
+        variant: "destructive"
+    });
+    } finally {
+    setIsLoading(false);
+    }
+};
 
-    return (
-        <>
-            <Toaster position="top-right" reverseOrder={false} />
+const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+    setIsGoogleLoading(true);
+    try {
+        const { access_token } = tokenResponse;
 
-            <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4 bg-gradient-to-br from-orange-50 to-yellow-50">
-                {isLoading && !userData ? (
-                    <div className="flex flex-col items-center justify-center gap-4">
-                        <ClipLoader color="#F97316" size={60} />
-                        <p className="text-amber-600">Checking your session...</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center w-full max-w-lg gap-10 p-8 md:p-10 rounded-2xl shadow-xl bg-white text-gray-800">
-                        <div className="flex flex-col items-center gap-6">
-                            <img className="w-16" src="/icon_light.svg" alt="Logo" />
-                            <h1 className="text-xl md:w-120 text-center font-bold bg-gradient-to-r from-red-400 to-amber-500 bg-clip-text text-transparent">
-                                Sign in to your account 
-                            </h1>
-                        </div>
+        // ✅ Fetch user info from Google
+        const res = await axios.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        {
+            headers: {
+            Authorization: `Bearer ${access_token}`,
+            },
+        }
+        );
 
-                        <button
-                            onClick={handleGoogleLogin}
-                            disabled={isGoogleLoading}
-                            className="flex items-center justify-center gap-3 w-full py-2 px-5 rounded-full border border-gray-300 hover:border-gray-400 transition disabled:opacity-70"
-                        >
-                            {isGoogleLoading ? (
-                                <ClipLoader color="#F97316" size={20} />
-                            ) : (
-                                <>
-                                    <img className="w-6" alt="Google icon" src="https://www.svgrepo.com/show/475656/google-color.svg" />
-                                    <span className="text-sm font-medium">Continue with Google</span>
-                                </>
-                            )}
-                        </button>
+        const userData = res.data;
+        console.log('Google user data:', userData);
 
-                        <div className="flex items-center w-full text-gray-400 text-sm">
-                            <hr className="flex-grow border-gray-300" />
-                            <span className="px-2">OR</span>
-                            <hr className="flex-grow border-gray-300" />
-                        </div>
+        toast({
+        title: `Welcome, ${userData.name}!`,
+        description: 'Google login successful',
+        });
 
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full text-sm">
-                            <div>
-                                <input
-                                    type="email"
-                                    name="email"
-                                    required
-                                    placeholder="Email"
-                                    className={`w-full p-3 px-5 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-full focus:outline-none focus:shadow-[0px_0px_15px_0px_rgba(150,50,25,0.4)]`}
-                                />
-                                {formErrors.email && <p className="text-red-500 text-xs mt-1 ml-2">{formErrors.email}</p>}
-                            </div>
-                            
-                            <div>
-                                <div className="relative w-full">
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        name="password"
-                                        required
-                                        placeholder="Password"
-                                        className={`w-full p-3 px-5 pr-12 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-full focus:outline-none focus:shadow-[0px_0px_15px_0px_rgba(150,50,25,0.4)]`}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(prev => !prev)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-amber-600"
-                                    >
-                                        <i className={`bi ${showPassword ? 'bi-eye' : 'bi-eye-slash'} text-xl`}></i>
-                                    </button>
-                                </div>
-                                {formErrors.password && <p className="text-red-500 text-xs mt-1 ml-2">{formErrors.password}</p>}
-                            </div>
+        // Now you can save userData to your backend or state
+        navigate('/dashboard');
+    } catch (error) {
+        console.error('Google login error:', error);
+        toast({
+        title: 'Error',
+        description: 'Google login failed. Please try again.',
+        variant: 'destructive',
+        });
+    } finally {
+        setIsGoogleLoading(false);
+    }
+    },
 
-                            <div className="flex justify-between items-center text-sm">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={rememberMe}
-                                        onChange={(e) => setRememberMe(e.target.checked)} 
-                                        className="form-checkbox rounded text-amber-600" 
-                                    />
-                                    <span>Remember me</span>
-                                </label>
-                                <a href="/forgot-password" className="hover:underline text-amber-600">
-                                    Forgot password?
-                                </a>
-                            </div>
+    onError: () => {
+    toast({
+        title: 'Error',
+        description: 'Google login failed. Please try again.',
+        variant: 'destructive',
+    });
+    setIsGoogleLoading(false);
+    },
+});
 
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="w-full py-3 rounded-full bg-gradient-to-tl from-[#ff0000fd] via-yellow-400 to-amber-600 text-white font-semibold text-lg transition transform hover:-translate-y-1 disabled:opacity-70 disabled:transform-none"
-                            >
-                                {isLoading ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                        <ClipLoader color="#fff" size={20} />
-                                        Logging in...
-                                    </span>
-                                ) : (
-                                    "Log In"
-                                )}
-                            </button>
+console.log('userData : ', userData);
 
-                            <hr className="border-gray-200" />
 
-                            <span className="text-sm text-center">
-                                Don't have an account?{' '}
-                                <a href="/signup" className="text-amber-600 hover:underline">
-                                    Sign Up
-                                </a>
-                            </span>
-                        </form>
-                    </div>
-                )}
+return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 px-4">
+    {isLoading && !localStorage.getItem('authData') ? (
+        <div className="flex flex-col items-center justify-center gap-4">
+        <Loader2 className="animate-spin h-12 w-12 text-orange-500" />
+        <p className="text-orange-600">Checking your session...</p>
+        </div>
+    ) : (
+        <div className="flex flex-col items-center justify-center w-full max-w-lg gap-8 p-8 md:p-10 rounded-2xl shadow-xl bg-white">
+        <div className="flex flex-col items-center gap-4">
+            <img className="w-16" src="/icon_light.svg" alt="Logo" />
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">
+            Sign in to your account
+            </h1>
+        </div>
+
+        <button
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading}
+            className="flex items-center justify-center gap-3 w-full py-3 px-5 rounded-lg border border-gray-300 hover:border-gray-400 transition disabled:opacity-70"
+        >
+            {isGoogleLoading ? (
+            <Loader2 className="animate-spin h-5 w-5 text-orange-500" />
+            ) : (
+            <>
+                <img className="w-5" alt="Google icon" src="https://www.svgrepo.com/show/475656/google-color.svg" />
+                <span className="text-sm font-medium">Continue with Google</span>
+            </>
+            )}
+        </button>
+
+        <div className="flex items-center w-full text-gray-400 text-sm">
+            <hr className="flex-grow border-gray-300" />
+            <span className="px-4">OR</span>
+            <hr className="flex-grow border-gray-300" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                type="email"
+                name="email"
+                required
+                placeholder="your.email@example.com"
+                className={`w-full pl-10 pr-4 py-3 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-0 focus:ring-orange-400 focus:border-orange-400`}
+                />
             </div>
-        </>
-    )
-}
+            {formErrors.email && <p className="text-red-500 text-xs mt-1 ml-2">{formErrors.email}</p>}
+            </div>
+            
+            <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                required
+                placeholder="Enter your password"
+                className={`w-full pl-10 pr-10 py-3 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-0 focus:ring-orange-400 focus:border-orange-400`}
+                />
+                <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-orange-600"
+                >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </button>
+            </div>
+            {formErrors.password && <p className="text-red-500 text-xs mt-1 ml-2">{formErrors.password}</p>}
+            </div>
+
+            <div className="flex justify-between items-center text-sm">
+            <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                type="checkbox" 
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)} 
+                className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" 
+                />
+                <span>Remember me</span>
+            </label>
+            <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-orange-600 hover:text-orange-800 hover:underline"
+            >
+                Forgot password?
+            </button>
+            </div>
+
+            <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3 rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold text-lg transition hover:from-orange-600 hover:to-yellow-600 disabled:opacity-70"
+            >
+            {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                <Loader2 className="animate-spin h-5 w-5" />
+                Logging in...
+                </span>
+            ) : (
+                "Log In"
+            )}
+            </button>
+
+            <div className="text-sm text-center pt-4">
+            Don't have an account?{' '}
+            <button
+                type="button"
+                onClick={() => navigate('/signup')}
+                className="text-orange-600 hover:text-orange-800 font-medium hover:underline"
+            >
+                Sign Up
+            </button>
+            </div>
+        </form>
+        </div>
+    )}
+    </div>
+);
+};
+
+export default LogInForm;

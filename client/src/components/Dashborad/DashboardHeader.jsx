@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState,  useEffect } from "react";
+import { useNavigate} from "react-router-dom";
 
 export default function DashboardHeader() {
     const [activeTab, setActiveTab] = useState("Dashboard");
@@ -12,6 +13,29 @@ export default function DashboardHeader() {
         "Project Updates",
         "Bookmarks"
     ];
+
+    const navigate = useNavigate(); 
+
+    useEffect(() => {
+        switch (activeTab) {
+            case tabs[0]:
+                navigate('/dashboard_page');
+            break;
+
+            case tabs[1]:
+                navigate('/favorite_page');
+            break;
+
+            case tabs[3]:
+                navigate('/messages');
+            break;
+
+            // default:
+            // navigate('/dashboard_page');
+            // break;
+        }
+    }, [activeTab, navigate]);
+
 
     return (
         <>

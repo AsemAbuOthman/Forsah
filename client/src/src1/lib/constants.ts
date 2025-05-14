@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { SkillCategory } from "./types";
 import {getCategoriesWithSkills} from './api'
 

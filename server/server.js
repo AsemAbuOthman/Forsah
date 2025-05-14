@@ -1,6 +1,7 @@
 const http = require('http');
 const url = require('url'); 
 const path = require('path');
+const querystring = require('querystring');
 const getRawBody = require('raw-body')
 const { getUser, 
         getCountries, 
@@ -24,10 +25,25 @@ const { getUser,
         deleteExperience,
         createEducation,
         updateEducation,
-        deleteEducation} = require('./controller/clsUser.controller');
+        deleteEducation,
+        signOut} = require('./controller/clsUser.controller');
 
-const { create } = require('domain');
+const {
+    createProject,
+    getProjects
+} = require('./controller/clsProject.controller');
 
+const{
+    getFreelancers
+} = require('./controller/clsFreelancer.controller');
+
+
+const{
+
+    getProposals,
+    createProposal,
+    checkProposals
+} = require('./controller/clsProposal.controller');
 
 const server = http.createServer(async (req, res)=>{
 
@@ -40,12 +56,22 @@ const server = http.createServer(async (req, res)=>{
     const pathUrl = parsedUrl.pathname;    
     const query = parsedUrl.query;
     
+    if (req.method === 'OPTIONS') {
+        res.writeHead(201);
+        res.end();
+        return;
+    }
     
     if(pathUrl === '/api'){
 
         res.writeHead(200, {'Content-Type': 'application/json'})
         res.end(JSON.stringify({message: 'This is from node js api :) '}))
         return; 
+    }
+
+    if (pathUrl === '/api/signout')  {
+
+        return signOut(req, res);
     }
     
     if (pathUrl === '/api/login' && req.method === 'POST')  {
@@ -88,6 +114,7 @@ const server = http.createServer(async (req, res)=>{
         console.log('Posting to api/inserting New User ... body => ', body.toString());
         return insertUser(req, res, body.toString());
     }
+
 
     if (pathUrl === '/api/certification' && req.method === 'POST')  {
 
@@ -310,10 +337,128 @@ const server = http.createServer(async (req, res)=>{
         return getProfile(req, res, userId);
     }
 
-    if (req.method === 'OPTIONS') {
-        res.writeHead(204);
-        res.end();
-        return;
+
+    if (pathUrl.startsWith('/api/projects/')) {
+
+        // Parse URL and query parameters
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+        
+        // Extract parameters with defaults
+        const page = parseInt(queryParams.page) || 1;
+        const limit = parseInt(queryParams.limit) || 10;
+        const {
+        search,
+        skills,
+        countries,
+        languages,
+        currencies,
+        projectStates,
+        minBudget,
+        maxBudget,
+        sort
+        } = queryParams;
+
+        // Prepare filters object
+        const filters = {
+            search,
+            skills: skills ? skills.split(',') : [],
+            countries: countries ? countries.split(',') : [],
+            languages: languages ? languages.split(',') : [],
+            currencies: currencies ? currencies.split(',') : [],
+            projectStates: projectStates ? projectStates.split(',') : [],
+            minBudget,
+            maxBudget
+        }
+
+        return getProjects(req, res, page, filters);
+    }
+
+    if (pathUrl.startsWith('/api/freelancers/')) {
+
+        // Parse URL and query parameters
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+        
+        // Extract parameters with defaults
+        const page = parseInt(queryParams.page) || 1;
+        const limit = parseInt(queryParams.limit) || 10;
+        const {
+        search,
+        skills,
+        countries,
+        languages,
+        currencies,
+        projectStates,
+        minBudget,
+        maxBudget,
+        sort
+        } = queryParams;
+
+        // Prepare filters object
+        const filters = {
+            search,
+            skills: skills ? skills.split(',') : [],
+            countries: countries ? countries.split(',') : [],
+            languages: languages ? languages.split(',') : [],
+            currencies: currencies ? currencies.split(',') : [],
+            projectStates: projectStates ? projectStates.split(',') : [],
+            minBudget,
+            maxBudget
+        }
+
+        return getFreelancers(req, res, page, {});
+    }
+    
+    if (pathUrl.startsWith('/api/project/') && req.method === 'POST') {
+
+        const body = await getRawBody(req);
+
+        console.log(body);
+
+        return createProject(req, res, body.toString());
+    }
+
+    if (pathUrl.startsWith('/api/proposals/')) {
+
+        const projectIdStr = pathUrl.split('/api/proposals/')[1];
+        const projectId = parseInt(projectIdStr, 10);
+
+        if (isNaN(projectId)) {
+            return res.status(400).send('Invalid porposal ID');
+        }
+    
+        console.log('Parsed proposalId from URL =>', projectId);
+
+        return  getProposals(req, res, projectId);
+    }
+
+    if (pathUrl.startsWith('/api/proposals/check')) {
+
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+
+        const {
+
+            freelancerId,
+            projectId
+            
+        } = queryParams;
+
+        if (isNaN(projectId)) {
+            return res.status(400).send('Invalid porposal ID');
+        }
+
+        return  checkProposals(req, res, projectId, freelancerId);
+    }
+
+    if (pathUrl.startsWith('/api/proposals') && req.method === 'POST') {
+
+        const body = await getRawBody(req);
+
+        console.log('My new proposal data : ', body.toString());
+
+        return createProposal(req, res, body.toString());
     }
 
     res.writeHead(404, { 'Content-Type': 'application/json' });

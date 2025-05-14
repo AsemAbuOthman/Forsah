@@ -1,11 +1,28 @@
-const sql = require('mssql');
-const {connString} = require('../config/clsConfig');
-const clsConfig = require('../config/clsConfig');
 const { log, error } = require('console');
-const { findUser, createPortfolio } = require('../controller/clsUser.controller');
-
+const {getConnection, closeConnection} = require('../config/clsConfig')
 
 class clsUser{
+
+    static async singOut(){
+
+        let result = null;
+
+        try {
+            
+            await closeConnection();
+            
+            if(await pool === null)
+            {
+                console.log('Connection closed successfully .' + err);
+                result = {message : 'Connection closed successfully .'};
+            }
+        } catch (err) {
+            
+            console.log('Connection closing failed ! ' + err);
+        }
+
+        return result; 
+    }
 
     static async getProfile(id){
 
@@ -13,9 +30,9 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
-            result = await sql.query`
+            result = await pool.query`
                 SELECT * FROM users 
                     INNER JOIN languages ON languages.languageId = users.languageId
                     INNER JOIN currencies ON currencies.currencyId = users.currencyId
@@ -26,7 +43,6 @@ class clsUser{
                     WHERE users.userId = ${id}
                 `;
 
-
             result = {
                 user: result.recordset[0], 
             };
@@ -36,15 +52,6 @@ class clsUser{
             
             console.log('User Profile : ' + err);
             result = null;
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -56,17 +63,25 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
-            
+            pool = await getConnection();
 
-            result = await sql.query`
+            result = await pool.query`
+
+                DECLARE @profileId INT;
+
+                SELECT @profileId = profileId FROM profiles WHERE userId = ${id};
+
                 UPDATE users SET 
-                    firstName = ${newData.firstName}, lastName = ${newData.lastName}, professionalTitle = ${newData.professionalTitle}
+                    firstName = ${newData.firstName}, lastName = ${newData.lastName}, professionalTitle = ${newData.professionalTitle}, hourlyRate = ${newData.hourlyRate}
                     WHERE userId = ${id} 
 
                 UPDATE profiles SET 
                     profileDescription = ${newData.profileDescription}
                     WHERE userId = ${id} 
+
+                UPDATE images SET 
+                    imageUrl = ${newData.imageUrl}
+                    WHERE imageableId = @profileId AND imageableType = 'profile';
             `
 
             if ( result.rowsAffected){
@@ -81,61 +96,116 @@ class clsUser{
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result;
     } 
 
-    static async getPortfolios(id){
 
+    static async getPortfolios(userId) {
         let result = null;
-
+    
         try {
-            
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
-
-            result = await sql.query`
-                SELECT * FROM portfolios 
-                    INNER JOIN sampleProjects ON sampleProjects.portfolioId = portfolios.portfolioId 
-                    INNER JOIN images ON images.imageableId = sampleProjects.sampleProjectId AND images.imageableType = 'portfolio'
-
-                    WHERE userId = ${id} 
-                `;
-
-                // INNER JOIN sampleProjectSkills ON sampleProjects.sampleProjectId = sampleProjectSkills.sampleProjectId 
-
-                // INNER JOIN skills ON skills.skillId = sampleProjectSkills.sampleProjectSkillId
-                // INNER JOIN categories ON categories.categoryId = skills.categoryId
-                
-                result ={
-                    portfolios: result.recordset,
-                };
-                
-        } catch (err) {
-            
-            console.log('user Portfolios : ' + err);
-            result = null;
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
+        pool = await getConnection();
+    
+        // 1. Get basic project info
+        const portfoliosResult = await pool.query`
+            SELECT 
+            p.portfolioId,
+            p.userId,
+            sp.sampleProjectId,
+            sp.sampleProjectTitle,
+            sp.sampleProjectDescription,
+            sp.completionDate,
+            sp.sampleProjectUrl
+            FROM portfolios p
+            INNER JOIN sampleProjects sp ON sp.portfolioId = p.portfolioId 
+            WHERE p.userId = ${userId}
+        `;
+    
+        const portfolios = portfoliosResult.recordset;
+    
+        if (!portfolios || portfolios.length === 0) {
+            return { portfolios: [] };
         }
-
-        return result; 
+    
+        const projectIds = portfolios.map(p => p.sampleProjectId);
+    
+        // 2. Get images
+        const imagesResult = await pool.query`
+            SELECT 
+            i.imageId, 
+            i.imageUrl, 
+            i.imageableId
+            FROM images i
+            WHERE i.imageableId IN (${projectIds})
+            AND i.imageableType = 'portfolio'
+        `;
+    
+        const imagesMap = imagesResult.recordset.reduce((acc, image) => {
+            if (!acc[image.imageableId]) acc[image.imageableId] = [];
+            acc[image.imageableId].push({
+            imageId: image.imageId,
+            imageUrl: image.imageUrl,
+            });
+            return acc;
+        }, {});
+    
+        // 3. Get skills (joined)
+        const skillsResult = await pool.query`
+            SELECT 
+            sps.sampleProjectSkillId,
+            sps.sampleProjectId,
+            s.skillId,
+            s.skillName
+            FROM sampleProjectSkills sps
+            INNER JOIN skills s ON sps.skillId = s.skillId
+            WHERE sps.sampleProjectId IN (${projectIds})
+        `;
+    
+        const skillsMap = skillsResult.recordset.reduce((acc, row) => {
+            if (!acc[row.sampleProjectId]) acc[row.sampleProjectId] = [];
+            acc[row.sampleProjectId].push({
+            sampleProjectSkillId: row.sampleProjectSkillId,
+            skillId: row.skillId,
+            skillName: row.skillName
+            });
+            return acc;
+        }, {});
+    
+        // 4. Final mapping to Portfolio interface
+        const portfoliosWithData = portfolios.map(p => {
+            const images = imagesMap[p.sampleProjectId] || [];
+            const skills = skillsMap[p.sampleProjectId] || [];
+    
+            return {
+            portfolioId: p.portfolioId,
+            userId: p.userId,
+            sampleProjectId: p.sampleProjectId,
+            sampleProjectTitle: p.sampleProjectTitle,
+            sampleProjectDescription: p.sampleProjectDescription,
+            completionDate: p.completionDate,
+            sampleProjectUrl: p.sampleProjectUrl,
+            images: images,
+            imageableId: images.map(img => img.imageId),
+            imageableType: "portfolio",
+            sampleProjectSkillId: skills.map(s => s.sampleProjectSkillId),
+            skillId: skills.map(s => s.skillId),
+            skillName: skills.map(s => s.skillName),
+            categoryId: [], // Add if categories exist
+            categoryName: [],
+            projectUrl: p.sampleProjectUrl,
+            };
+        });
+    
+        result = { portfolios: portfoliosWithData };
+    
+        } catch (error) {
+        console.error("Error getting portfolios:", error);
+        throw new Error("Failed to retrieve portfolios");
+        }
+    
+        return result;
     }
 
     static async getSkills(id){
@@ -144,10 +214,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting *');
 
-            result = await sql.query`
+            result = await pool.query`
                 SELECT * FROM userSkills
                     INNER JOIN skills ON userSkills.skillId = skills.skillId
                     INNER JOIN categories ON categories.categoryId = skills.categoryId
@@ -159,20 +229,10 @@ class clsUser{
                     skills: result.recordset,
                 };
                 
-                console.log('Here skills: ', result);
         } catch (err) {
             
             console.log('userSkills : ' + err);
             result = null;
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -181,15 +241,14 @@ class clsUser{
     static async getExperiences(id){
 
         let result = null;
+        
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting *');
 
-
-
-            result= await sql.query`
+            result= await pool.query`
                 SELECT * FROM experiences WHERE userId = ${id}
                 `;
 
@@ -203,15 +262,6 @@ class clsUser{
             
             console.log('user Experiences : ' + err);
             result = null;
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -223,10 +273,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await sql.query`
+            result = await pool.query`
                 SELECT * FROM certifications WHERE userId = ${id}
                 `;
                 
@@ -238,16 +288,7 @@ class clsUser{
         } catch (err) {
             
             console.log('user Certifications : ' + err);
-        } finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
-        }
+        } 
 
         return result; 
     }
@@ -258,10 +299,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting * :::::::: ', certificationId, ' --- ',newData);
 
-            result = await sql.query`
+            result = await pool.query`
                 UPDATE certifications 
                     SET certificationTitle = ${newData.certificationTitle},
                         certificationOrganization = ${newData.certificationOrganization},
@@ -282,15 +323,6 @@ class clsUser{
         } catch (err) {
             
             console.log('user Certifications : ' + err);
-        } finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -302,10 +334,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await sql.query`
+            result = await pool.query`
 
                 DELETE FROM certifications 
                     OUTPUT DELETED.userId
@@ -318,15 +350,6 @@ class clsUser{
         } catch (err) {
             
             console.log('user Certifications : ' + err);
-        } finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -337,14 +360,14 @@ class clsUser{
 
         let result = null;
 
+
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting *');
 
 
-
-            result = await sql.query`
+            result = await pool.query`
                 SELECT * FROM educations WHERE userId = ${id}
                 `;
                 
@@ -357,15 +380,6 @@ class clsUser{
             
             console.log('user Educations : ' + err);
             result = null;
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -378,11 +392,11 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting', );
 
 
-            result = await sql.query`
+            result = await pool.query`
                 SELECT userId
                 FROM USERS 
                 WHERE email = ${email} 
@@ -396,15 +410,6 @@ class clsUser{
             
             console.log('User : ' + err);
             result = null;
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -414,24 +419,16 @@ class clsUser{
     static async getAllCountries(){
         let result = null;
 
-        try {
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
 
-            result = await sql.query`SELECT countryId as value, countryName as label, ISO as code FROM COUNTRIES`;
+        try {
+            pool = await getConnection();
+
+            result = await pool.query`SELECT countryId as value, countryName as label, ISO as code FROM COUNTRIES`;
 
             result = result.recordsets;
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         // console.log('result : ', result);
@@ -443,23 +440,14 @@ class clsUser{
         let result = null;
 
         try {
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
-            result = await sql.query`SELECT categoryId as value, categoryName as label FROM CATEGORIES`;
+            result = await pool.query`SELECT categoryId as value, categoryName as label FROM CATEGORIES`;
 
             result = result.recordsets;
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         // console.log('result : ', result);
@@ -471,9 +459,9 @@ class clsUser{
         let result = null;
 
         try {
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
-            result = await sql.query`SELECT skillId, skillName, categoryName, skills.categoryId 
+            result = await pool.query`SELECT skillId, skillName, categoryName, skills.categoryId 
                                         FROM categories 
                                         INNER JOIN skills ON skills.categoryId = categories.categoryId
                                         ORDER BY categories.categoryId, skillName`;
@@ -504,15 +492,6 @@ class clsUser{
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         // console.log('result : ', result);
@@ -525,23 +504,14 @@ class clsUser{
         let result = null;
 
         try {
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
-            result = await sql.query`SELECT currencyId as value, code as label, symbol FROM CURRENCIES`;
+            result = await pool.query`SELECT currencyId as value, code as label, symbol FROM CURRENCIES`;
 
             result = result.recordsets;
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         // console.log('result : ', result);
@@ -553,23 +523,26 @@ class clsUser{
 
         let result = null;
 
+        console.log('User : ', user);
+        
+
         try {
             
-            const pool = await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             
             result = await pool.query`
 
             DECLARE @newUserId INT;
 
             INSERT INTO USERS
-            (email, password, username, firstname, lastname, roleId, countryId, phone, currencyId)
-            VALUES(${user.email}, ${user.password},${user.username},${user.firstName},${user.lastName}, ${1},${user.country.value},${user.phone},${user.currency.value});
+            (email, password, username, firstname, lastname, roleId, countryId, phone, currencyId, professionalTitle, hourlyRate, languageId, city, zipCode)
+            VALUES(${user.email}, ${user.password},${user.username},${user.firstName},${user.lastName}, ${user.roleId}, ${user.countryId.value},${user.phone},${user.currencyId.value},${user.professionalTitle}, ${parseInt(user.hourlyRate)}, ${user.languageId.value},${user.city},${user.zipCode});
 
             Set @newUserId = SCOPE_IDENTITY();
             
             INSERT INTO PROFILES 
             (profileDescription, userId)
-            VALUES(${user.description}, @newUserId)
+            VALUES(${user.profileDescription}, @newUserId)
 
             DECLARE @newProfileId INT;
 
@@ -610,15 +583,6 @@ class clsUser{
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result;
@@ -629,11 +593,11 @@ class clsUser{
 
         let result =  null;
 
-        console.log('Portfolio Data : ', newData);
+        // console.log('Portfolio Data : ', newData);
 
         try {
             
-            const pool = await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
             result = await pool.query`
                 DECLARE @newPortfolioId INT;
@@ -656,8 +620,8 @@ class clsUser{
                 const sampleProjectId = await result.recordset[0].sampleProjectId;
                 console.log('New SamplePorject ID:', sampleProjectId);
 
-                    const imagesUrlValues = newData.imageUrl
-                        .map(singleImageUrl => `('${singleImageUrl}', ${sampleProjectId}, 'portfolio')`)
+                    const imagesUrlValues = newData.images
+                        .map(singleImageUrl => `('${singleImageUrl.imageUrl}', ${sampleProjectId}, 'portfolio')`)
                         .join(', ');
             
                         console.log('imagesUrlValues : ', imagesUrlValues);
@@ -696,15 +660,6 @@ class clsUser{
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result;
@@ -715,11 +670,11 @@ class clsUser{
 
         let result =  null;
 
-        console.log('Certification Data : ', newData);
+        // console.log('Certification Data : ', newData);
 
         try {
             
-            const pool = await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
             result = await pool.query`
                 INSERT INTO certifications 
@@ -732,15 +687,6 @@ class clsUser{
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result;
@@ -750,11 +696,11 @@ class clsUser{
 
         let result =  null;
 
-        console.log('Experience Data : ', newData);
+        // console.log('Experience Data : ', newData);
 
         try {
             
-            const pool = await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
             result = await pool.query`
                 INSERT INTO experiences 
@@ -767,15 +713,6 @@ class clsUser{
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result;
@@ -787,10 +724,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting * :::::::: ', experienceId, ' --- ', newData);
 
-            result = await sql.query`
+            result = await pool.query`
                 UPDATE experiences 
                     SET experienceTitle = ${newData.experienceTitle},
                         experienceDescription = ${newData.experienceDescription},
@@ -811,16 +748,7 @@ class clsUser{
         } catch (err) {
             
             console.log('user Experiences : ' + err);
-        } finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
-        }
+        } 
 
         return result; 
     }
@@ -831,10 +759,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await sql.query`
+            result = await pool.query`
 
                 DELETE FROM experiences 
                     OUTPUT DELETED.userId
@@ -847,15 +775,6 @@ class clsUser{
         } catch (err) {
             
             console.log('user Certifications : ' + err);
-        } finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result; 
@@ -866,16 +785,16 @@ class clsUser{
 
         let result =  null;
 
-        console.log('Education Data : ', newData);
+        // console.log('Education Data : ', newData);
 
         try {
             
-            const pool = await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
 
             result = await pool.query`
                 INSERT INTO educations 
                     (userId, educationDegree, educationOrganization, startDate, endDate, educationDescription)
-                VALUES(${newData.userId},${newData.educationDegree},${newData.educationOrganization},${newData.startDate},${newData.endDate}, ${educationDescription})
+                VALUES(${newData.userId},${newData.educationDegree},${newData.educationOrganization},${newData.startDate},${newData.endDate}, ${newData.educationDescription})
             `
 
             result = await this.getEducations(newData.userId);
@@ -883,15 +802,6 @@ class clsUser{
         } catch (error) {
             
             console.log(error);
-        }finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
         }
 
         return result;
@@ -903,10 +813,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting * :::::::: ', educationId, ' --- ', newData);
 
-            result = await sql.query`
+            result = await pool.query`
                 UPDATE educations 
                     SET educationDegree = ${newData.educationDegree},
                         educationOrganization = ${newData.educationOrganization},
@@ -927,16 +837,7 @@ class clsUser{
         } catch (err) {
             
             console.log('user Education : ' + err);
-        } finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
-        }
+        } 
 
         return result; 
     }
@@ -947,10 +848,10 @@ class clsUser{
 
         try {
             
-            await sql.connect(connString).catch(err => console.error('Database connection failed:', err));
+            pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await sql.query`
+            result = await pool.query`
 
                 DELETE FROM educations 
                     OUTPUT DELETED.userId
@@ -963,25 +864,14 @@ class clsUser{
         } catch (err) {
             
             console.log('user Educations : ' + err);
-        } finally {
-            if (sql) {
-                try {
-                    await sql.close();
-                    console.log('Connection closed');
-                } catch (closeErr) {
-                    console.error('Failed to close connection:', closeErr);
-                }
-            }
-        }
+        } 
 
         return result; 
     }
 }
 
 
-
-
-console.log(clsUser.getExperiences(2026));
+// console.log(clsUser.getExperiences(2026));
 
 // console.log(
 

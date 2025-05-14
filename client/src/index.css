@@ -166,3 +166,10 @@
     .dark .react-select-container .react-select__placeholder {
     @apply text-gray-400;
     }
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;     /* Firefox */
+    }

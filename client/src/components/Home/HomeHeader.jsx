@@ -99,21 +99,21 @@ export default function HomeHeader() {
                     <div className="hidden md:block flex items-center justify-evenly w-full font-semibold text-black/65 ">
                         <ul className="flex items-center justify-start w-fit  gap-6 whitespace-nowrap">
                             <li className="group flex justify-evenly  cursor-pointer py-5 "  onMouseEnter={() => {setIsHover(true); setTabId(1)}} onMouseLeave={() => {setIsHover(false); setTabId(0)}}>
-                                <button  className=" flex  items-center justify-center group-hover:text-[#00ff00]/80 transation delay-75 duration-300  group-hover:scale-105 cursor-pointer" >Find talent<i className="ri-arrow-down-s-line text-2xl transition-transform delay-100 duration-300 ease-in-out transform-gpu group-hover:rotate-180"></i>
+                                <button  className=" flex  items-center justify-center group-hover:text-violet-500/80 transation delay-75 duration-300  group-hover:scale-105 cursor-pointer" >Find talent<i className="ri-arrow-down-s-line text-2xl transition-transform delay-100 duration-300 ease-in-out transform-gpu group-hover:rotate-180"></i>
                                 </button>
                                 {
                                     tabId == 1 &&  isHover && <HomeHeaderMenu tabs={tabsFirstOption} categories={categoriesFirstOption} otherTalents={otherTalentsFirstOption} secondTabListApi={"https://restcountries.com/v3.1/all?fields=name,flags"}/>
                                 }
                             </li>
                             <li className="group flex justify-start cursor-pointer py-5 "   onMouseEnter={() => {setIsHover(true); setTabId(2)}} onMouseLeave={() => {setIsHover(false); setTabId(0)} }>
-                                <button className=" flex items-center justify-center group-hover:text-[#00ff00]/80 transation delay-75 duration-300 group-hover:scale-105 cursor-pointer" >Find work<i className="ri-arrow-down-s-line text-2xl transition-transform delay-100 duration-300 ease-in-out transform-gpu group-hover:rotate-180"></i>
+                                <button className=" flex items-center justify-center group-hover:text-violet-500/80 transation delay-75 duration-300 group-hover:scale-105 cursor-pointer" >Find work<i className="ri-arrow-down-s-line text-2xl transition-transform delay-100 duration-300 ease-in-out transform-gpu group-hover:rotate-180"></i>
                                 </button>   
                                 {
                                     tabId == 2 &&  isHover && <HomeHeaderMenu tabs={tabsSecondOption} categories={categoriesSecondOption} otherTalents={otherTalentsSecondOption} secondTabListApi={null}/>
                                 }
                             </li>
                             <li className="group flex justify-center cursor-pointer py-5 " onMouseEnter={() => {setIsHover(true); setTabId(3)}} onMouseLeave={() => {setIsHover(false); setTabId(0)}}>
-                                <button className=" flex items-center justify-center group-hover:text-[#00ff00]/80 transation delay-75 duration-300 group-hover:scale-105 cursor-pointer">Explore<i width='100' className="ri-arrow-down-s-line text-2xl transition-transform delay-100 duration-300 ease-in-out transform-gpu group-hover:rotate-180"></i>
+                                <button className=" flex items-center justify-center group-hover:text-violet-500/80 transation delay-75 duration-300 group-hover:scale-105 cursor-pointer">Explore<i width='100' className="ri-arrow-down-s-line text-2xl transition-transform delay-100 duration-300 ease-in-out transform-gpu group-hover:rotate-180"></i>
                                 </button>
                                 {
                                     tabId == 3 && isHover && <HomeHeaderMenuExplore tabs={tabsThirdOption} otherTalents={otherTalentsThirdOption} />
@@ -144,8 +144,8 @@ export default function HomeHeader() {
                         <div className="md:hidden px-2">
                             <img className="w-35" src="/logo_light.svg" alt="Forsah" />
                         </div>
-                        <a onClick={()=> navigate("/login")}  className="cursor-pointer hidden md:block md:px-5 font-medium transition duration-200 hover:text-[#00ff00]/80 hover:scale-105">Log in</a>
-                        <button onClick={()=> navigate("/signup")} className="cursor-pointer bg-black/80 text-white rounded-full px-5 py-0.5 md:px-10 md:py-1 transition delay-150 duration-400 ease-in-out hover:translate-x-1  hover:bg-gradient-to-tr from-[#44a201] to-[#a1ff25] not-hover:shadow-[0px_0px_5px_1px_rgba(0,0,0,0.7)] ">Join</button>      
+                        <a onClick={()=> navigate("/login")}  className="cursor-pointer hidden md:block md:px-5 font-medium transition duration-200 hover:text-violet-500/80 hover:scale-105">Log in</a>
+                        <button onClick={()=> navigate("/signup")} className="cursor-pointer bg-black/80 text-white rounded-full px-5 py-0.5 md:px-10 md:py-1 transition delay-150 duration-400 ease-in-out hover:translate-x-1  hover:text-lg not-hover:shadow-[0px_0px_5px_1px_rgba(0,0,0,0.7)] ">Join</button>      
                     </div>
                 </div>
             </header>

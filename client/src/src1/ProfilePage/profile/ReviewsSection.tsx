@@ -5,9 +5,10 @@ import { format } from "date-fns";
 interface ReviewsSectionProps {
   reviews: Review[];
   onViewAllReviews?: () => void;
+  isEditable?: boolean; // Changed to isEditable
 }
 
-export default function ReviewsSection({ reviews, onViewAllReviews }: ReviewsSectionProps) {
+export default function ReviewsSection({ reviews, onViewAllReviews, isEditable }: ReviewsSectionProps) {
   // Display only the first 3 reviews, or all if there are 3 or fewer
   const displayedReviews = reviews.slice(0, 3);
   const hasMoreReviews = reviews.length > 3;
@@ -82,7 +83,7 @@ export default function ReviewsSection({ reviews, onViewAllReviews }: ReviewsSec
         </div>
       )}
       
-      {hasMoreReviews && (
+      {hasMoreReviews && isEditable && (
         <div className="mt-4 text-center">
           <Button 
             variant="link" 

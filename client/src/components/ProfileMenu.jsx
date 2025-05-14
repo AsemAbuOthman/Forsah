@@ -19,8 +19,8 @@ export default function ProfileMenu() {
     return (
         <>
 
-            <nav className="md:flex items-start justify-center starting:translate-y-10 starting:scale-90 transition duration-300 ease-in-out z-100 max-h-screen w-fit m-0 py-5 shadow-[0px_0px_10px_1px_rgba(0,0,0,0.1)] absolute">
-                <div className="bg-white w-70 px-2 h-full md:flex justify-around flex-wrap overflow-auto gap-10 py-5 rounded-2xl shadow-[0px_0px_10px_1px_rgba(0,0,0,0.1)]">
+            <nav className="md:flex items-start justify-center starting:translate-y-10 starting:scale-90 transition duration-300 ease-in-out z-100 max-h-screen w-fit m-0 py-5  absolute bg-transparent shadow-xs ">
+                <div className="bg-white w-70 px-2 h-full md:flex justify-around flex-wrap overflow-auto gap-10 py-5 rounded-2xl  shadow-xl ">
                     <div className="text-primary  w-full flex items-center justify-center space-x-3 hover:bg-accent hover:bg-opacity-10 rounded-md p-2 transition duration-200">
                         <GeneralList  items={menuOptions} isWithImg={true} isWithTitle={false}/>
                     </div>

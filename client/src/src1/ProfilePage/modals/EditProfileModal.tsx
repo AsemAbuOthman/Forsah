@@ -23,22 +23,19 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
     lastName: user.lastName,
     professionalTitle: user.professionalTitle,
     countryId: user.countryId,
-    hourlyRate: "75", // Example default value
+    hourlyRate: user.hourlyRate, // Example default value
     profileDescription: user.profileDescription || ""
   });
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [userData, setUserData] = useContext(UserContext)
 
   const updateUserMutation = useMutation({
     mutationFn: (userDetails: Partial<User>) => {
 
-      setUserData(updateUserProfile(user.userId, userDetails));
-      return userData;
+      return updateUserProfile(user.userId, userDetails);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
@@ -46,6 +43,7 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
       onClose();
     },
     onError: (error) => {
+      // queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
       toast({
         title: "Failed to update profile",
         description: "There was an error updating your profile.",
@@ -62,13 +60,14 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     updateUserMutation.mutate({
       firstName: formData.firstName,
       lastName: formData.lastName,
       professionalTitle: formData.professionalTitle,
       countryId: formData.countryId,
-      profileDescription: formData.profileDescription
+      profileDescription: formData.profileDescription,
+      hourlyRate: formData.hourlyRate
     });
   };
   

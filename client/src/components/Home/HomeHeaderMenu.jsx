@@ -67,7 +67,7 @@ export default function HomeHeaderMenu({tabs, categories, otherTalents, secondTa
         <> 
             <nav className="md:flex items-start justify-center  starting:-translate-x-60 transition duration-500 ease-in-out z-100 h-140 w-fit m-0 py-5 mt-10 fixed">
 
-                <div className="hidden  bg-gradient-to-tr from-[#ff00008a] via-yellow-400 to-amber-500  w-fit h-full md:flex justify-around flex-wrap overflow-auto gap-10   py-6 px-8 rounded-2xl  shadow-[0px_0px_10px_1px_rgba(0,0,0,0.3)]">
+                <div className="hidden  bg-gradient-to-tr from-[#ff0000] via-violet-400 to-amber-500  w-fit h-full md:flex justify-around flex-wrap overflow-auto gap-10   py-6 px-8 rounded-2xl  shadow-[0px_0px_10px_1px_rgba(0,0,0,0.3)]">
 
                     <div className="md:flex flex-col  items-center gap-2 h-fit ">
                         <div className="space-y-4">
@@ -77,7 +77,7 @@ export default function HomeHeaderMenu({tabs, categories, otherTalents, secondTa
                         </div>
                     </div>
 
-                    <div className="md:grid items-center justify-items-center grid-cols-1   justify-center overflow-auto  shrink-1 border-l-1 border-dashed   border-white/80 pl-5  gap-4.5 h-full px-2 py-1">
+                    <div className="md:grid items-center justify-items-center grid-cols-1   justify-center overflow-auto  shrink-1 border-l-1 border-dashed   border-white/80 pl-5  gap-4.5 h-full px-2 py-1 no-scrollbar">
                         {
                             showCategories()
                         }

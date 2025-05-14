@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -13,16 +13,9 @@ import { X, PlusIcon, XIcon, Loader2 } from "lucide-react";
 import { Portfolio } from "../../lib/types";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 as uuidv4 } from 'uuid';
-import { storage as app} from '../../../services/Firebase';
+import { storage as app } from '../../../services/Firebase';
+import { UserContext } from "../../../store/UserProvider";
 
-/**
- * Edit Portfolio Modal Component
- * @param {Object} props - Component props
- * @param {Portfolio | undefined} props.portfolio - Portfolio data (undefined for new portfolio)
- * @param {boolean} props.isOpen - Whether the modal is open
- * @param {Function} props.onClose - Function to close the modal
- * @returns {JSX.Element} Edit Portfolio Modal
- */
 export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
   portfolio?: Portfolio;
   isOpen: boolean;
@@ -35,8 +28,8 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
   const [formData, setFormData] = useState<Omit<Portfolio, 'portfolioId' | 'userId' | 'sampleProjectId'>>({
     sampleProjectTitle: "",
     sampleProjectDescription: "",
-    imageUrl: [],
-    completionDate: new Date(),
+    images: [],
+    completionDate: new Date().toISOString().split('T')[0],
     sampleProjectUrl: "",
     sampleProjectSkillId: [],
     skillId: [],
@@ -49,13 +42,14 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
   });
 
   const [selectedTechnology, setSelectedTechnology] = useState("");
-  
+  const [userData, setUserData] = useContext(UserContext);
+
   useEffect(() => {
     if (portfolio) {
       setFormData({
         sampleProjectTitle: portfolio.sampleProjectTitle,
         sampleProjectDescription: portfolio.sampleProjectDescription,
-        imageUrl: portfolio.imageUrl || [],
+        images: portfolio.images || [],
         completionDate: portfolio.completionDate,
         sampleProjectUrl: portfolio.sampleProjectUrl || "",
         sampleProjectSkillId: portfolio.sampleProjectSkillId || [],
@@ -68,12 +62,12 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
         technologies: portfolio.technologies || [],
       });
     } else {
-      // Default values for new portfolio
+      // Reset to default values for new portfolio
       setFormData({
         sampleProjectTitle: "",
         sampleProjectDescription: "",
-        imageUrl: [PORTFOLIO_IMAGES[0]],
-        completionDate: new Date(),
+        images: [],
+        completionDate: new Date().toISOString().split('T')[0],
         sampleProjectUrl: "",
         sampleProjectSkillId: [],
         skillId: [],
@@ -90,7 +84,6 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Create or update portfolio mutation
   const portfolioMutation = useMutation({
     mutationFn: (data: Omit<Portfolio, 'portfolioId' | 'userId' | 'sampleProjectId'>) => {
       if (isEditing && portfolio) {
@@ -98,7 +91,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
       } else {
         return createPortfolio({
           ...data,
-          userId: DEFAULT_USER_ID
+          userId: userData?.userId
         });
       }
     },
@@ -145,8 +138,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Ensure we have at least one image
-    if (formData.imageUrl.length === 0) {
+    if (formData.images.length === 0) {
       toast({
         title: "Image required",
         description: "Please add at least one image for your portfolio.",
@@ -158,17 +150,15 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
     portfolioMutation.mutate(formData);
   };
   
-  // Handle file upload to Firebase Storage
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
 
     const files = Array.from(e.target.files);
     
-    // Check if adding these files would exceed the limit of 5 images
-    if (formData.imageUrl.length + files.length > 5) {
+    if (formData.images.length + files.length > 5) {
       toast({
         title: "Too many images",
-        description: `You can only upload a maximum of 5 images. You currently have ${formData.imageUrl.length}.`,
+        description: `You can only upload a maximum of 5 images. You currently have ${formData.images.length}.`,
         variant: "destructive",
       });
       return;
@@ -178,31 +168,40 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
     
     try {
       const uploadPromises = files.map(async (file) => {
-        // Generate a unique filename using UUID
+        // Validate file type and size
+        if (!file.type.startsWith('image/')) {
+          throw new Error('File is not an image');
+        }
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          throw new Error('File size exceeds 5MB');
+        }
+
         const fileExtension = file.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExtension}`;
         const storageRef = ref(storage, `portfolio-images/${fileName}`);
         
-        // Upload the file
         await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
         
-        // Get the download URL
-        return getDownloadURL(storageRef);
+        return {
+          imageUrl: url,
+          imageableId: 0, // Will be set when saved
+          imageableType: "portfolio"
+        };
       });
       
-      // Wait for all uploads to complete
-      const newImageUrls = await Promise.all(uploadPromises);
+      const newImages = await Promise.all(uploadPromises);
       
       setFormData((prev) => ({
         ...prev,
-        imageUrl: [...prev.imageUrl, ...newImageUrls]
+        images: [...prev.images, ...newImages]
       }));
       
     } catch (error) {
       console.error("Error uploading images:", error);
       toast({
         title: "Upload failed",
-        description: "There was an error uploading your images. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error uploading your images.",
         variant: "destructive",
       });
     } finally {
@@ -210,29 +209,24 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
     }
   };
   
-  // Create a hidden file input that will be triggered by our custom button
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const handleAddImage = () => {
-    // Trigger the hidden file input
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    fileInputRef.current?.click();
   };
   
   const handleRemoveImage = (imageUrl: string) => {
     setFormData((prev) => ({
       ...prev,
-      imageUrl: prev.imageUrl.filter(img => img !== imageUrl)
+      images: prev.images.filter(img => img.imageUrl !== imageUrl)
     }));
   };
 
-  // Flatten all technology options from skill categories
   const allTechnologies = SKILL_CATEGORIES.flatMap(category => 
     category.options.map(option => ({
       value: option.value,
       label: option.label,
-      category: category.name // Added category information
+      category: category.name
     }))
   );
   
@@ -252,7 +246,6 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
         </DialogHeader>
         
         <form onSubmit={handleSubmit}>
-          {/* Hidden file input for multiple image upload */}
           <input 
             type="file" 
             ref={fileInputRef}
@@ -289,10 +282,10 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
             <div className="grid gap-2">
               <Label>Images</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-2">
-                {formData.imageUrl.map((image, index) => (
+                {formData.images.map((image, index) => (
                   <div key={index} className="relative bg-gray-100 rounded-md overflow-hidden h-28">
                     <img 
-                      src={image} 
+                      src={image.imageUrl} 
                       alt={`Project image ${index + 1}`} 
                       className="w-full h-full object-cover" 
                     />
@@ -300,7 +293,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
                       size="icon"
                       variant="destructive"
                       className="absolute top-1 right-1 h-5 w-5 rounded-full"
-                      onClick={() => handleRemoveImage(image)}
+                      onClick={() => handleRemoveImage(image.imageUrl)}
                       type="button"
                       disabled={isUploading}
                     >
@@ -309,7 +302,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
                   </div>
                 ))}
                 
-                {formData.imageUrl.length < 5 && (
+                {formData.images.length < 5 && (
                   <div
                     className={`border-2 border-dashed rounded-md h-28 flex items-center justify-center cursor-pointer ${
                       isUploading 
@@ -383,11 +376,11 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
                 id="completionDate"
                 name="completionDate"
                 type="date"
-                value={formData.completionDate ? new Date(formData.completionDate).toISOString().split('T')[0] : ""}
+                value={formData.completionDate}
                 onChange={(e) => {
                   setFormData(prev => ({
                     ...prev,
-                    completionDate: new Date(e.target.value)
+                    completionDate: e.target.value
                   }));
                 }}
                 required

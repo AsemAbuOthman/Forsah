@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid'; 
+import { v4 as uuidv4 } from 'uuid';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '../services/Firebase';
 
 const ImageUploader = ({
     initialImage = null,
@@ -8,13 +10,14 @@ const ImageUploader = ({
     className = '',
     accept = 'image/*',
     maxSize = 5 * 1024 * 1024, // 5MB
+    storagePath = 'uploads/' // Default storage path
 }) => {
     const [preview, setPreview] = useState(initialImage);
     const [error, setError] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
 
-
-
-    const handleChange = useCallback((e) => {
+    const handleChange = useCallback(async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -30,37 +33,75 @@ const ImageUploader = ({
         }
 
         setError('');
+        setIsUploading(true);
+        setProgress(0);
         
-        // Generate new filename with GUID
-        const fileExtension = file.name.split('.').pop();
-        const newFileName = `${uuidv4()}.${fileExtension}`;
-        
-        // Create a new File object with the GUID name
-        const renamedFile = new File([file], newFileName, {
-            type: file.type,
-            lastModified: file.lastModified
-        });
-        
+        try {
+            // Generate new filename with GUID
+            const fileExtension = file.name.split('.').pop();
+            const newFileName = `${uuidv4()}.${fileExtension}`;
+            const storageRef = ref(storage, `${storagePath}${newFileName}`);
+            
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = () => {
+                setPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
 
-        // Create preview
-        const reader = new FileReader();
-        reader.onload = () => {
-            setPreview(reader.result);
-            onChange(renamedFile, reader.result); // Pass the renamed file to parent
-        };
-        reader.readAsDataURL(file);
-    }, [maxSize, onChange]);
+            // Upload to Firebase Storage with progress tracking
+            const uploadTask = uploadBytesResumable(storageRef, file);
+            
+            uploadTask.on('state_changed', 
+                (snapshot) => {
+                    // Track upload progress
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setProgress(progress);
+                },
+                (error) => {
+                    // Handle unsuccessful uploads
+                    setError('Upload failed: ' + error.message);
+                    setIsUploading(false);
+                },
+                async () => {
+                    // Handle successful upload
+                    try {
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        onChange(downloadURL); // Only pass the download URL
+                        setIsUploading(false);
+                    } catch (error) {
+                        setError('Failed to get download URL: ' + error.message);
+                        setIsUploading(false);
+                    }
+                }
+            );
+
+        } catch (error) {
+            setError('Upload error: ' + error.message);
+            setIsUploading(false);
+        }
+    }, [maxSize, onChange, storagePath]);
 
     const removeImage = useCallback(() => {
         setPreview(null);
-        onChange(null, null);
+        onChange(null); // Pass null when removing image
         setError('');
     }, [onChange]);
 
     return (
         <div className={`space-y-2 ${className}`}>
             <div className="relative group">
-                {preview ? (
+                {isUploading ? (
+                    <div className="flex flex-col items-center justify-center h-48 w-full rounded-lg border border-gray-200 bg-gray-50">
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div 
+                                className="bg-orange-500 h-2.5 rounded-full" 
+                                style={{ width: `${progress}%` }}
+                            ></div>
+                        </div>
+                        <p className="mt-3 text-sm text-gray-500">Uploading... {Math.round(progress)}%</p>
+                    </div>
+                ) : preview ? (
                     <>
                         <img
                             src={preview}

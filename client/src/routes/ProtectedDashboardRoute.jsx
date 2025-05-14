@@ -9,12 +9,13 @@ export default function ProtectedDashboardRoute({ children}) {
 
     useEffect(() => {
 
-        console.log('This is User Data : ', userData);
-
-        if (!userData) {
+        if (!userData && !localStorage.getItem('authData')) {
+            
             navigate('/login');
         }
     }, [userData, navigate]);
+
+    console.log('ProtectedDashboardRoute : ', userData);
 
     if (!userData) return null;
 

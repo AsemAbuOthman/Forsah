@@ -1,20 +1,38 @@
 const clsUser = require('../model/clsUser.model');
+const {getConnection} = require('../config/clsConfig')
 
-
-    const getUser = async (req, res, body) => {
+    const  getUser = async (req, res, body) => {
         try {
             const { email, password } = JSON.parse(body);
-        
+            
+
             const user = await clsUser.findUserByEmailPassword(email, password);
         
-            // console.log( 'user : ', user);
-
             if (user) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(user));
             } else {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: 'Invalid credentials' }));
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Not found' }));
+            }
+            } catch (error) {
+                console.log('Login Error:)' + error);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Internal server error' }));
+        }
+    };
+
+    const signOut = async (req, res) => {
+        try {
+            
+            const result = await clsUser.singOut();
+        
+            if (result) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            } else {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Not found' }));
             }
             } catch (error) {
                 console.log('Login Error:)' + error);
@@ -107,7 +125,7 @@ const clsUser = require('../model/clsUser.model');
                 res.end(JSON.stringify({ message: 'Added Successfully :)' }));
             } else {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: 'Error with fetching countries from DB' }));
+                res.end(JSON.stringify({ message: 'Error with inserting user into DB' }));
             }
         } catch (error) {
             console.log('Fetching Error:)' + error);
@@ -366,8 +384,8 @@ const clsUser = require('../model/clsUser.model');
         try {
         
             const certifications = await clsUser.getCertifications(id);
-        
-            console.log( 'user : ', certifications);
+
+            console.log( 'certifications : ', certifications);
 
             if (certifications) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -491,4 +509,5 @@ module.exports = {
     deleteExperience,
     createEducation,
     updateEducation,
-    deleteEducation};
+    deleteEducation,
+    signOut};

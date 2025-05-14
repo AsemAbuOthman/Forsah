@@ -1,0 +1,139 @@
+const { log, error } = require('console');
+const {getConnection} = require('../config/clsConfig')
+
+class clsFreelancer {
+
+        static async getFreelancers(page = 1, filters = {}) {
+            let result;
+            try {
+                const pool = await getConnection();
+                const pageSize = 10;
+                const offset = (page - 1) * pageSize;
+
+                // Step 1: Get paginated users
+                const userQuery = `
+                    SELECT 
+                        u.[userId], u.[username], u.[password], u.[email], u.[firstName],
+                        u.[lastName], u.[companyName], u.[languageId], u.[phone],
+                        u.[locationUrl], u.[currencyId], u.[countryId], u.[zipCode],
+                        u.[city], u.[dateOfBirth], u.[isActive], u.[roleId], u.[createdAt],
+                        u.[professionalTitle], u.[hourlyRate]
+                    FROM [Forsah].[dbo].[users] AS u
+                    WHERE u.[roleId] = 1
+                    ORDER BY u.createdAt DESC
+                    OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
+                `;
+
+                const userRequest = pool.request();
+                userRequest.input("offset", offset);
+                userRequest.input("pageSize", pageSize);
+
+                const userResult = await userRequest.query(userQuery);
+                const users = userResult.recordset;
+
+                if (!users || users.length === 0) return { users: [], totalUsers: 0 };
+
+                const userIds = users.map(u => u.userId);
+
+                // Step 2: Get user profiles
+                const profileQuery = `
+                    SELECT [profileId], [profileDescription], [userId]
+                    FROM [Forsah].[dbo].[profiles]
+                    WHERE [userId] IN (${userIds.map((_, i) => `@uid${i}`).join(",")})
+                `;
+
+                const profileRequest = pool.request();
+                userIds.forEach((id, i) => profileRequest.input(`uid${i}`, id));
+
+                const profileResult = await profileRequest.query(profileQuery);
+                const profiles = profileResult.recordset;
+
+                const profileMap = {};
+                const profileIds = [];
+                profiles.forEach(p => {
+                    profileMap[p.userId] = p;
+                    profileIds.push(p.profileId);
+                });
+
+                let imageMap = {};
+                if (profileIds.length > 0) {
+                    const imageQuery = `
+                        WITH RankedImages AS (
+                            SELECT 
+                                [imageId], [imageUrl], [imageableId], [createdAt],
+                                ROW_NUMBER() OVER (PARTITION BY [imageableId] ORDER BY [createdAt] DESC) AS rn
+                            FROM [Forsah].[dbo].[images]
+                            WHERE [imageableType] = 'profile' AND [imageableId] IN (${profileIds.map((_, i) => `@pid${i}`).join(",")})
+                        )
+                        SELECT * FROM RankedImages WHERE rn = 1;
+                    `;
+
+                    const imageRequest = pool.request();
+                    profileIds.forEach((id, i) => imageRequest.input(`pid${i}`, id));
+
+                    const imageResult = await imageRequest.query(imageQuery);
+                    imageResult.recordset.forEach(img => {
+                        imageMap[img.imageableId] = img;
+                    });
+                }
+
+                // Step 4: Get user skills
+                const skillQuery = `
+                    SELECT us.userId, s.skillId, s.skillName
+                    FROM [Forsah].[dbo].[userSkills] us
+                    INNER JOIN [Forsah].[dbo].[skills] s ON s.skillId = us.skillId
+                    WHERE us.userId IN (${userIds.map((_, i) => `@sid${i}`).join(",")})
+                `;
+
+                const skillRequest = pool.request();
+                userIds.forEach((id, i) => skillRequest.input(`sid${i}`, id));
+
+                const skillResult = await skillRequest.query(skillQuery);
+                const skillsMap = {};
+                skillResult.recordset.forEach(row => {
+                    if (!skillsMap[row.userId]) skillsMap[row.userId] = [];
+                    skillsMap[row.userId].push({ skillId: row.skillId, skillName: row.skillName });
+                });
+
+                // Step 5: Get total users for pagination
+                const countResult = await pool.request().query(`
+                    SELECT COUNT(*) AS totalUsers FROM [Forsah].[dbo].[users]
+                `);
+
+                const totalUsers = countResult.recordset[0].totalUsers;
+
+                // Step 6: Combine all data
+                const usersWithData = users.map(user => {
+                    const profile = profileMap[user.userId] || null;
+                    const profileImage = profile ? imageMap[profile.profileId] || null : null;
+                    return {
+                        ...user,
+                        profile,
+                        profileImage,
+                        skills: skillsMap[user.userId] || []
+                    };
+                });
+
+                result = {
+                    users: usersWithData,
+                    totalUsers
+                };
+
+            } catch (err) {
+                console.error("Error fetching freelancers:", err);
+                return null;
+            }
+
+            return result;
+        }
+}
+
+// (async ()=> {
+
+//     const result = await clsFreelancer.getFreelancers();
+//     console.log('Freelancers : ', result);
+    
+// })()
+
+
+module.exports = clsFreelancer;

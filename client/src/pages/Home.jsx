@@ -1,20 +1,19 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios'
+import { useEffect } from 'react';
 import HomeLayout from '../layout/HomeLayout';
+import { useNavigate } from 'react-router-dom';
 
 export default function Home() {
 
-    const [apiData, setApiData] = useState({})
+    const navigate = useNavigate();
 
     useEffect(
         ()=>{
-            const fetchData = async ()=>{
 
-                const res = await axios('/api');
-                setApiData(res.data);
-            }
+            const routeDashboard = () => {
+                navigate('/login')
+            };
 
-            fetchData();
+            localStorage.getItem('userData') ? routeDashboard() : null;
         }, [])
 
     return (

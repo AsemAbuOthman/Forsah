@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import ProfileMenu from "./ProfileMenu"
+import { useNavigate } from "react-router-dom";
+import { UserContext } from "../store/UserProvider";
 
 export default function HomeDashboardHeader({children}) {
 
     const [isHover, setIsHover] = useState(false);
     const [tabId, setTabId] = useState(0);
-    
+    const navigate = useNavigate();
+    const [userData] = useContext(UserContext);
 
     return (
         <>
@@ -13,7 +16,7 @@ export default function HomeDashboardHeader({children}) {
                 <div className="flex justify-evenly items-center bg-white px-5 md:px-10 md:h-16   ">
 
                     <div className="hidden md:block md:pr-15">
-                        <a href="/">
+                        <a href="/dashboard">
                             <img className="w-80" src="/logo_light.svg" alt="Forsah" />
                         </a>    
                     </div> 
@@ -69,20 +72,20 @@ export default function HomeDashboardHeader({children}) {
                                 }
                             </li>
                             <li className="group flex justify-start cursor-pointer py-5 px-3"   onMouseEnter={() => {setIsHover(true); setTabId(2)}} onMouseLeave={() => {setIsHover(false); setTabId(0)} }>
-                                <button className="hidden md:block bg-black/30 text-white rounded-full px-5 py-0.5 md:py-1 transition delay-150 duration-400 ease-in-out active:translate-x-1   active:scale-93 hover:bg-gradient-to-tr from-[#e7a900] to-[#e1d600] shadow-[0px_0px_5px_0px_rgba(0,0,0,0.6)] ">Post a Project</button>      
+                                <button className="hidden md:block bg-black/30 text-white rounded-full px-5 py-0.5 md:py-1 transition delay-150 duration-400 ease-in-out active:translate-x-1   active:scale-93 hover:bg-gradient-to-tr from-[#e7a900] to-[#e1d600] shadow-[0px_0px_5px_0px_rgba(0,0,0,0.6)] " onClick={()=> navigate('/post_project ')}>Post a Project</button>      
                                 {
                                     // tabId == 2 &&  isHover && <HomeHeaderMenu tabs={tabsSecondOption} categories={categoriesSecondOption} otherTalents={otherTalentsSecondOption} secondTabListApi={null}/>
                                 }
                             </li>
-                            <li className="group flex justify-center items-center  cursor-pointer rounded-sm  hover:bg-black/10 "   onMouseEnter={() => {setIsHover(true); setTabId(6)}} onMouseLeave={() => {setIsHover(false); setTabId(0)} }>
+                            <li className="group flex justify-center items-center  cursor-pointer rounded-sm  hover:bg-transparent"   onMouseEnter={() => {setIsHover(true); setTabId(6)}} onMouseLeave={() => {setIsHover(false); setTabId(0)} }>
                                 <div className=" p-3">
                                     <div className="relative  h-[42px] w-[42px] rounded-full p-1 ">
                                         <img
-                                            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSlrZqTCInyg6RfYC7Ape20o-EWP1EN_A8fOA&s"
+                                            src={userData.imageUrl}
                                             alt="avatar"
                                             className="h-full w-full rounded-full object-cover object-center "
                                             />
-                                        <span className="absolute -right-0.5 -top-0.5 block h-[14px] w-[14px] rounded-full border-[2.3px] border-white bg-[#219653] dark:border-dark"></span>
+                                        <span className=" absolute -right-0.5 -top-0.5 block h-[14px] w-[14px] rounded-full border-[2.3px] border-white bg-[#219653] dark:border-dark"></span>
                                     </div>
                                         {
                                             tabId == 6 &&  isHover && <ProfileMenu />

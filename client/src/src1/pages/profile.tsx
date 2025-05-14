@@ -1,6 +1,5 @@
 import { useState, useEffect, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DEFAULT_USER_ID } from "../lib/constants";
 import { ModalType, Portfolio, Certification, Experience, Education, Skill, User } from "../lib/types";
 import { 
   getUserProfile, 
@@ -9,11 +8,10 @@ import {
   getUserCertifications, 
   getUserExperiences, 
   getUserEducations, 
-  getUserReviews,
-  getUserProfiles
+  getUserReviews
 } from "../lib/api";
-import {UserContext} from '../../store/UserProvider';
-
+import { UserContext } from '../../store/UserProvider';
+import { Loader2 } from "lucide-react";
 
 // Components
 import ProfileHeader from "../ProfilePage/profile/ProfileHeader";
@@ -25,9 +23,6 @@ import EducationSection from "../ProfilePage/profile/EducationSection";
 import SkillsSection from "../ProfilePage/profile/SkillsSection";
 import ReviewsSection from "../ProfilePage/profile/ReviewsSection";
 
-// Components
-import Navigation from "../ProfilePage/Navigation";
-
 // Modals
 import { EditProfileModal } from "../ProfilePage/modals/EditProfileModal";
 import { EditAboutModal } from "../ProfilePage/modals/EditAboutModal";
@@ -36,14 +31,12 @@ import { EditCertificationModal } from "../ProfilePage/modals/EditCertificationM
 import { EditExperienceModal } from "../ProfilePage/modals/EditExperienceModal";
 import { EditEducationModal } from "../ProfilePage/modals/EditEducationModal";
 import { EditSkillsModal } from "../ProfilePage/modals/EditSkillsModal";
-import { ViewPortfolioModal } from "../ProfilePage//modals/ViewPortfolioModal";
+import { ViewPortfolioModal } from "../ProfilePage/modals/ViewPortfolioModal";
 import { ViewCertificationModal } from "../ProfilePage/modals/ViewCertificationModal";
 import SwitchProfileModal from "../ProfilePage/modals/SwitchProfileModal";
 import CreateProfileModal from "../ProfilePage/modals/CreateProfileModal";
-import axios from "axios";
-import { data } from "react-router-dom";
 
-export default function Profile() {
+export default function Profile({ DEFAULT_USER_ID = -1 }) {
   // Modal state
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | undefined>(undefined);
@@ -52,93 +45,73 @@ export default function Profile() {
   const [selectedEducation, setSelectedEducation] = useState<Education | undefined>(undefined);
   const [selectedSkillCategory, setSelectedSkillCategory] = useState<string | undefined>(undefined);
   const [userProfiles, setUserProfiles] = useState<User[]>([]);
-  const [userData, setUserData] = useContext(UserContext);
-  // let DEFAULT_USER_ID = userData.userId;
-  console.log(userData);
-  
-  
-  // Fetch user data
-  
-  const { data: user, isLoading: isUserLoading , refetch} = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}`], 
-    queryFn: () => getUserProfile(DEFAULT_USER_ID)
-  });
-  
+  const [userData] = useContext(UserContext);
+  const [isEditable, setIsEditable] = useState(false);
+
+  // Determine if profile is editable
   useEffect(() => {
-    refetch();
-  }, [userData]);
-  
-  // Fetch user profiles
-  // const { data: profiles = [] } = useQuery({
-  //   queryKey: [`/api/users/${DEFAULT_USER_ID}/profiles`],
-  //   queryFn: () => getUserProfile(DEFAULT_USER_ID),
-  //   enabled: !!user && !user.userId
-  // });
-  
-  // Store user profiles in state
-  // useEffect(() => {
-  //   if (profiles?.length > 0) {
-  //     setUserProfiles(profiles);
-  //   }
-  // }, [profiles]);
+    const profileUserId = DEFAULT_USER_ID === -1 ? userData?.userId : DEFAULT_USER_ID;
+    setIsEditable(profileUserId === userData?.userId);
+  }, [DEFAULT_USER_ID, userData?.userId]);
 
-  // Fetch skills
+  // Fetch user data
+  const profileUserId = DEFAULT_USER_ID === -1 ? userData?.userId : DEFAULT_USER_ID;
+  const { data: user, isLoading: isUserLoading, refetch } = useQuery({
+    queryKey: [`/api/users/${profileUserId}`], 
+    queryFn: () => getUserProfile(profileUserId),
+    enabled: !!profileUserId
+  });
 
-
+  // Fetch related data
   const { data: skills = [], isLoading: isSkillsLoading } = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}/skills`],
-    queryFn: () => getUserSkills(DEFAULT_USER_ID),
-    enabled: !!user
+    queryKey: [`/api/users/${profileUserId}/skills`],
+    queryFn: () => getUserSkills(profileUserId),
+    enabled: !!profileUserId
   });
 
-
-  // Fetch portfolios
   const { data: portfolios = [], isLoading: isPortfoliosLoading } = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}/portfolios`],
-    queryFn: () => getUserPortfolios(DEFAULT_USER_ID),
-    enabled: !!user
+    queryKey: [`/api/users/${profileUserId}/portfolios`],
+    queryFn: () => getUserPortfolios(profileUserId),
+    enabled: !!profileUserId
   });
 
-  // Fetch certifications
   const { data: certifications = [], isLoading: isCertificationsLoading } = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}/certifications`],
-    queryFn: () => getUserCertifications(DEFAULT_USER_ID),
-    enabled: !!user
+    queryKey: [`/api/users/${profileUserId}/certifications`],
+    queryFn: () => getUserCertifications(profileUserId),
+    enabled: !!profileUserId
   });
 
-  // Fetch experiences
   const { data: experiences = [], isLoading: isExperiencesLoading } = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}/experiences`],
-    queryFn: () => getUserExperiences(DEFAULT_USER_ID),
-    enabled: !!user
+    queryKey: [`/api/users/${profileUserId}/experiences`],
+    queryFn: () => getUserExperiences(profileUserId),
+    enabled: !!profileUserId
   });
 
-  // Fetch educations
   const { data: educations = [], isLoading: isEducationsLoading } = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}/educations`],
-    queryFn: () => getUserEducations(DEFAULT_USER_ID),
-    enabled: !!user
+    queryKey: [`/api/users/${profileUserId}/educations`],
+    queryFn: () => getUserEducations(profileUserId),
+    enabled: !!profileUserId
   });
 
-
-  // Fetch reviews
   const { data: reviews = [], isLoading: isReviewsLoading } = useQuery({
-    queryKey: [`/api/users/${DEFAULT_USER_ID}/reviews`],
-    queryFn: () => getUserReviews(DEFAULT_USER_ID),
-    enabled: !!user
+    queryKey: [`/api/users/${profileUserId}/reviews`],
+    queryFn: () => getUserReviews(profileUserId),
+    enabled: !!profileUserId
   });
 
   // Loading state
-  // if (isUserLoading) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-  //         <p className="mt-4 text-gray-600">Loading profile...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (isUserLoading || isSkillsLoading || isPortfoliosLoading || 
+      isCertificationsLoading || isExperiencesLoading || 
+      isEducationsLoading || isReviewsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="animate-spin h-20 w-20 text-amber-500 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Error state
   if (!user) {
@@ -168,30 +141,21 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen">
-      {/* Navigation */}
-      {/* {user && <Navigation user={user} />} */}
-      
       {/* Header Banner */}
       <div className="gradient-blue h-48 relative">
         <div className="container mx-auto px-4 flex justify-between items-center">
           <h1 className="text-white text-2xl font-bold pt-6">Profile</h1>
-          {/* <div className="flex space-x-2 pt-6">
-            <button className="bg-white text-primary px-4 py-1 rounded-md font-medium text-sm">Edit Profile</button>
-            <button className="bg-transparent text-white border border-white px-4 py-1 rounded-md font-medium text-sm">Dashboard</button>
-          </div> */}
         </div>
       </div>
-
 
       {/* Profile Content */}
       <div className="container mx-auto px-4 -mt-16 pb-20">
         {/* Profile Header */}
         <ProfileHeader 
-          user={
-            user 
-          } 
-          onEdit={() => setActiveModal('editProfile')}
-          onSwitchProfile={handleOpenSwitchProfile}
+          user={user} 
+          onEdit={isEditable ? () => setActiveModal('editProfile') : undefined}
+          onSwitchProfile={isEditable ? handleOpenSwitchProfile : undefined}
+          isEditable={isEditable}
         />
 
         {/* Profile Tabs */}
@@ -238,7 +202,8 @@ export default function Profile() {
             <div id="about">
               <AboutSection 
                 user={user} 
-                onEdit={() => setActiveModal('editAbout')} 
+                onEdit={isEditable ? () => setActiveModal('editAbout') : undefined} 
+                isEditable={isEditable}
               />
             </div>
 
@@ -246,14 +211,15 @@ export default function Profile() {
             <div id="portfolio">
               <PortfolioSection 
                 portfolios={portfolios} 
-                onAddPortfolio={() => {
+                isEditable={isEditable}
+                onAddPortfolio={isEditable ? () => {
                   setSelectedPortfolio(undefined);
                   setActiveModal('editPortfolio');
-                }}
-                onEditPortfolio={(portfolio) => {
+                } : undefined}
+                onEditPortfolio={isEditable ? (portfolio) => {
                   setSelectedPortfolio(portfolio);
                   setActiveModal('editPortfolio');
-                }}
+                } : undefined}
                 onViewDetails={(portfolio) => {
                   setSelectedPortfolio(portfolio);
                   setActiveModal('viewPortfolio');
@@ -265,14 +231,15 @@ export default function Profile() {
             <div id="certifications">
               <CertificationsSection 
                 certifications={certifications}
-                onAddCertification={() => {
+                isEditable={isEditable}
+                onAddCertification={isEditable ? () => {
                   setSelectedCertification(undefined);
                   setActiveModal('editCertification');
-                }}
-                onEditCertification={(certification) => {
+                } : undefined}
+                onEditCertification={isEditable ? (certification) => {
                   setSelectedCertification(certification);
                   setActiveModal('editCertification');
-                }}
+                } : undefined}
                 onViewCertification={(certification) => {
                   setSelectedCertification(certification);
                   setActiveModal('viewCertification');
@@ -284,14 +251,15 @@ export default function Profile() {
             <div id="experience">
               <ExperienceSection 
                 experiences={experiences}
-                onAddExperience={() => {
+                isEditable={isEditable}
+                onAddExperience={isEditable ? () => {
                   setSelectedExperience(undefined);
                   setActiveModal('editExperience');
-                }}
-                onEditExperience={(experiences) => {
-                  setSelectedExperience(experiences);
+                } : undefined}
+                onEditExperience={isEditable ? (experience) => {
+                  setSelectedExperience(experience);
                   setActiveModal('editExperience');
-                }}
+                } : undefined}
               />
             </div>
 
@@ -299,14 +267,15 @@ export default function Profile() {
             <div id="education">
               <EducationSection 
                 educations={educations}
-                onAddEducation={() => {
+                isEditable={isEditable}
+                onAddEducation={isEditable ? () => {
                   setSelectedEducation(undefined);
                   setActiveModal('editEducation');
-                }}
-                onEditEducation={(education) => {
+                } : undefined}
+                onEditEducation={isEditable ? (education) => {
                   setSelectedEducation(education);
                   setActiveModal('editEducation');
-                }}
+                } : undefined}
               />
             </div>
           </div>
@@ -316,16 +285,14 @@ export default function Profile() {
             {/* Skills */}
             <SkillsSection 
               skills={skills}
-              onEditSkills={() => setActiveModal('editSkills')}
+              isEditable={isEditable}
+              onEditSkills={isEditable ? () => setActiveModal('editSkills') : undefined}
             />
 
             {/* Reviews */}
             {/* <ReviewsSection 
               reviews={reviews}
-              onViewAllReviews={() => {
-                // In a real app, this would navigate to a reviews page or show a modal
-                console.log("View all reviews");
-              }}
+              isEditable={isEditable}
             /> */}
           </div>
         </div>
@@ -361,9 +328,9 @@ export default function Profile() {
           portfolio={selectedPortfolio}
           isOpen={true}
           onClose={closeModal}
-          onEdit={() => {
+          onEdit={isEditable ? () => {
             setActiveModal('editPortfolio');
-          }}
+          } : undefined}
         />
       )}
 
@@ -380,9 +347,9 @@ export default function Profile() {
           certification={selectedCertification}
           isOpen={true}
           onClose={closeModal}
-          onEdit={() => {
+          onEdit={isEditable ? () => {
             setActiveModal('editCertification');
-          }}
+          } : undefined}
         />
       )}
 

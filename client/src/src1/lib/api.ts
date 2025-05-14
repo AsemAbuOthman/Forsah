@@ -28,14 +28,14 @@ import { User } from 'lucide-react';
 export const getUserProfile = async (userId: number): Promise<User> => {
 
   const response = await api.get(`/users/${userId}`); 
-  return  response.data.user as User;
+  return await response.data.user as User;
 };
 
 
 export const updateUserProfile = async (userId: number, userData: Partial<User>): Promise<User> => {
-  console.log(userData);
+  console.log("update user profile : ", userData);
   const response = await api.patch(`/users/${userId}`, userData);
-  console.log(response.data.user);
+  console.log("response after update user profile : ", response.data.user);
   
   return response.data.user as User;
 };
@@ -52,22 +52,20 @@ export const createUserProfile = async (userId: number, profileData: Partial<Use
 
 export const switchProfileType = async (userId: number, profileType: 'freelancer' | 'client'): Promise<User> => {
   const response = await api.patch(`/users/${userId}/profile-type`, { profileType });
-  return response.data;
+  return  response.data;
 
 };
 
 export const getCategoriesWithSkills = async (): Promise<SkillCategory[]> => {
   const response = await api.get(`/categoriesWithSkills`);
 
-  console.log(response.data);
-
-  return response.data.data as SkillCategory[];
+  return await response.data.data as SkillCategory[];
 };
 
 // Skills API
 export const getUserSkills = async (userId: number): Promise<Skill[]> => {
   const response = await api.get(`/users/${userId}/skills`);
-  return response.data.skills as Skill[];
+  return await response.data.skills as Skill[];
 };
 
 export const createSkill = async (skillData: Omit<Skill, 'id'>): Promise<Skill> => {
@@ -86,23 +84,23 @@ export const deleteSkill = async (skillId: number): Promise<void> => {
 
 // Portfolio API
 export const getUserPortfolios = async (userId: number): Promise<Portfolio[]> => {
-  const response = await api.get(`/users/${userId}/portfolios`);
-  return response.data.portfolios as Portfolio[];
 
+  const response = await api.get(`/users/${userId}/portfolios`);
+
+  console.log('portfolios : ', response.data.portfolios);
+  
+
+  return await response.data.portfolios as Portfolio[];
 };
 
 export const getPortfolio = async (portfolioId: number): Promise<Portfolio> => {
   const response = await api.get(`/portfolios/${portfolioId}`);
-  return response.data.portfolios as Portfolio;
+  return await response.data.portfolios as Portfolio;
 };
 
 export const createPortfolio = async (portfolioData: Omit<Portfolio, 'id'>): Promise<Portfolio[]> => {
   
-  console.log('portfolio : ', portfolioData);
-
   const response = await api.post(`/users/${portfolioData.userId}/portfolios`, portfolioData);
-
-  console.log('response.data.portfolios : ', response.data.portfolios);
 
   return response.data.portfolios as Portfolio[];
 };
@@ -119,8 +117,8 @@ export const deletePortfolio = async (portfolioId: number): Promise<void> => {
 // Certification API
 export const getUserCertifications = async (userId: number): Promise<Certification[]> => {
   const response = await api.get(`/users/${userId}/certifications`);
-  return response.data.certifications as Certification[];
-};
+  return await response.data.certifications as Certification[];
+};    
 
 export const createCertification = async (certificationData: Omit<Certification, 'id'>): Promise<Certification[]> => {
   const response = await api.post('/certification', certificationData);
@@ -140,19 +138,19 @@ export const deleteCertification = async (certificationId: number): Promise<void
 // Experience API
 export const getUserExperiences = async (userId: number): Promise<Experience[]> => {
   const response = await api.get(`/users/${userId}/experiences`);
-  return response.data.experiences as Experience[];
+  return await response.data.experiences as Experience[];
 };
 
 export const createExperience = async (experienceData: Omit<Experience, 'id'>): Promise<Experience[]> => {
 
-  console.log('experienceData : ', experienceData);
+  // console.log('experienceData : ', experienceData);
   
   const response = await api.post('/experience', experienceData);
   return response.data.experiences as Experience[];
 };
 
 export const updateExperience = async (experienceId: number, experienceData: Partial<Experience>): Promise<Experience[]> => {
-  console.log('experienceData : ', experienceData);
+  // console.log('experienceData : ', experienceData);
 
 
   const response = await api.patch(`/experience/${experienceId}`, experienceData);
@@ -160,7 +158,7 @@ export const updateExperience = async (experienceId: number, experienceData: Par
 };
 
 export const deleteExperience = async (experienceId: number): Promise<void> => {
-  console.log('experienceId : ', experienceId);
+  // console.log('experienceId : ', experienceId);
 
 
   const response = await api.delete(`/experience/${experienceId}`);
@@ -170,7 +168,7 @@ export const deleteExperience = async (experienceId: number): Promise<void> => {
 // Education API
 export const getUserEducations = async (userId: number): Promise<Education[]> => {
   const response = await api.get(`/users/${userId}/educations`);
-  return response.data.educations as Education[];
+  return await response.data.educations as Education[];
 
 };
 
@@ -192,7 +190,7 @@ export const deleteEducation = async (educationId: number): Promise<void> => {
 // Review API
 export const getUserReviews = async (userId: number): Promise<Review[]> => {
   const response = await api.get(`/users/${userId}/reviews`);
-  return response.data;
+  return await response.data;
 
 };
 

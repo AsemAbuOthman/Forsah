@@ -1,3 +1,5 @@
+const sql = require('mssql');
+global.pool = null;
 
 
 class clsConfig{
@@ -11,7 +13,38 @@ class clsConfig{
             encrypt: false,
             trustServerCertificate: true
         }
-    };
+    }
+
+    static getConnection = async ()=> {
+        if (!global.pool) {
+            try {
+                global.pool = await sql.connect(this.connString);
+                console.log('Database connected');
+            } catch (err) {
+                console.error('Database connection failed:', err);
+                throw err;
+            }
+        }else{
+            console.log('Database already connected');
+        }
+        return global.pool;
+    }
+    
+    static closeConnection = async ()=> {
+        if (global.pool) {
+            try {
+                global.pool.close();
+                console.log('Database closed');
+            } catch (err) {
+                console.error('Database connection failed:', err);
+                throw err;
+            }
+        }else{
+            console.log('Database already closed');
+        }
+    
+        return global.pool;
+    }
 
 }
 

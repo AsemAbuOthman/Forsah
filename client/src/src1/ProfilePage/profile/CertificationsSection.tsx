@@ -5,18 +5,20 @@ import { deleteCertification } from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { PlusIcon, EyeIcon, PencilIcon, Trash2Icon } from "lucide-react";
-import {CERTIFICATE_IMAGES} from '../../lib/constants'
+import { CERTIFICATE_IMAGES } from '../../lib/constants';
 
 interface CertificationsSectionProps {
   certifications: Certification[];
-  onAddCertification: () => void;
-  onEditCertification: (certification: Certification) => void;
+  isEditable?: boolean;
+  onAddCertification?: () => void;
+  onEditCertification?: (certification: Certification) => void;
   onViewCertification: (certification: Certification) => void;
 }
 
 export default function CertificationsSection({ 
   certifications, 
-  onAddCertification, 
+  isEditable = false,
+  onAddCertification,
   onEditCertification,
   onViewCertification
 }: CertificationsSectionProps) {
@@ -57,25 +59,29 @@ export default function CertificationsSection({
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-800">Certifications</h3>
-        <Button 
-          className="text-white gradient-violet"
-          onClick={onAddCertification}
-        >
-          <PlusIcon className="h-4 w-4 mr-1" />
-          Add Certification
-        </Button>
+        {isEditable && onAddCertification && (
+          <Button 
+            className="text-white gradient-violet"
+            onClick={onAddCertification}
+          >
+            <PlusIcon className="h-4 w-4 mr-1" />
+            Add Certification
+          </Button>
+        )}
       </div>
       
       {certifications.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
           <div className="text-gray-500">No certifications yet</div>
-          <Button 
-            className="mt-4 text-white gradient-violet"
-            onClick={onAddCertification}
-          >
-            <PlusIcon className="h-4 w-4 mr-1" />
-            Add Your First Certification
-          </Button>
+          {isEditable && onAddCertification && (
+            <Button 
+              className="mt-4 text-white gradient-violet"
+              onClick={onAddCertification}
+            >
+              <PlusIcon className="h-4 w-4 mr-1" />
+              Add Your First Certification
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -111,22 +117,26 @@ export default function CertificationsSection({
                   <EyeIcon className="h-3 w-3 mr-1" />
                   View
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-gray-400 hover:text-gray-600 mr-2 h-6 w-6"
-                  onClick={() => onEditCertification(certification)}
-                >
-                  <PencilIcon className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-red-400 hover:text-red-600 h-6 w-6"
-                  onClick={() => handleDelete(certification.certificationId)}
-                >
-                  <Trash2Icon className="h-3 w-3" />
-                </Button>
+                {isEditable && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-gray-400 hover:text-gray-600 mr-2 h-6 w-6"
+                      onClick={() => onEditCertification?.(certification)}
+                    >
+                      <PencilIcon className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-400 hover:text-red-600 h-6 w-6"
+                      onClick={() => handleDelete(certification.certificationId)}
+                    >
+                      <Trash2Icon className="h-3 w-3" />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           ))}
