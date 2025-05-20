@@ -14,15 +14,16 @@ export default function LogOut() {
 
             const signOut = async ()=>{
 
-                result = await axios.get('/api/signout');
+                result = await axios.get('/api/logout');
             }
 
             localStorage.removeItem('authData');
+            localStorage.removeItem('userData');
             setUserData(null);
 
             signOut();
 
-            console.log('result : ', result.data.message);
+            console.log('result : ', result?.data.message);
             
             navigate('/');
     }, [])

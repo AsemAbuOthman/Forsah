@@ -32,7 +32,8 @@ export const getUserProfile = async (userId: number): Promise<User> => {
 };
 
 
-export const updateUserProfile = async (userId: number, userData: Partial<User>): Promise<User> => {
+export const updateUserProfile = async (userId: number, userData: Promise<User>): Promise<User> => {
+  
   console.log("update user profile : ", userData);
   const response = await api.patch(`/users/${userId}`, userData);
   console.log("response after update user profile : ", response.data.user);

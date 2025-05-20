@@ -10,9 +10,9 @@ class clsProject {
         
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
                 DECLARE @projectId INT;
                 
                 INSERT INTO projects (projectTitle, projectDescription, minBudget, maxBudget, userId, projectDeadline, projectStateId)
@@ -58,7 +58,7 @@ class clsProject {
     static async getProjects(page = 1, filters = {}) {
         let result;
         try {
-            pool = await getConnection();
+            const pool = await getConnection();
             const pageSize = 11;
             const offset = (page - 1) * pageSize;
     

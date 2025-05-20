@@ -39,7 +39,7 @@ export default function ProfileHeader({ user, onEdit, isEditable = false }: Prof
       const firebasePath = extractFirebasePath(user.imageUrl);
 
       if (downloadUrl) {
-        const storageRef = ref(storage, firebasePath);
+        const storageRef = ref(storage, `profile-pictures/${firebasePath}`);
         await deleteObject(storageRef);
         console.log("Deleted from Firebase:", firebasePath);
       } else {
@@ -88,7 +88,7 @@ export default function ProfileHeader({ user, onEdit, isEditable = false }: Prof
             <img
               src={
                 user.imageUrl ||
-                "https://img.freepik.com/premium-vector/account-icon-user-icon-vector-graphics_292645-552.jpg?w=740"
+                "https://img.freepik.com/premium-photo/user-icon-account-icon-3d-illustration_118019-6801.jpg?uid=R132432657&ga=GA1.1.710432733.1736715852&semt=ais_hybrid&w=740"
               }
               alt="Profile"
               className="w-24 h-24 rounded-full object-cover border-4 border-white"

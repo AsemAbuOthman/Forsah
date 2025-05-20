@@ -19,7 +19,7 @@ export function ViewCertificationModal({ certification, isOpen, onClose, onEdit 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[650px]">
+      <DialogContent className="sm:max-w-[650px] transition-all hover:scale-125 duration-300 scale-100">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="text-2xl font-bold">{certification.certificationTitle}</DialogTitle>
           <div className="flex space-x-2">

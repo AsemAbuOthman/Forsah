@@ -110,7 +110,7 @@ export function EditExperienceModal({ experience, isOpen, onClose }: EditExperie
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] transition-all hover:scale-125 duration-300 scale-100">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Work Experience' : 'Add Work Experience'}</DialogTitle>
           <Button 

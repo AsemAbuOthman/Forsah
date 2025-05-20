@@ -81,7 +81,7 @@ export default function HomeDashboardHeader({children}) {
                                 <div className=" p-3">
                                     <div className="relative  h-[42px] w-[42px] rounded-full p-1 ">
                                         <img
-                                            src={userData.imageUrl}
+                                            src={userData.imageUrl || `https://img.freepik.com/premium-photo/user-icon-account-icon-3d-illustration_118019-6801.jpg?uid=R132432657&ga=GA1.1.710432733.1736715852&semt=ais_hybrid&w=740`}
                                             alt="avatar"
                                             className="h-full w-full rounded-full object-cover object-center "
                                             />

@@ -5,7 +5,6 @@ const {getConnection} = require('../config/clsConfig')
         try {
             const { email, password } = JSON.parse(body);
             
-
             const user = await clsUser.findUserByEmailPassword(email, password);
         
             if (user) {
@@ -26,7 +25,7 @@ const {getConnection} = require('../config/clsConfig')
         try {
             
             const result = await clsUser.singOut();
-        
+            
             if (result) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(result));

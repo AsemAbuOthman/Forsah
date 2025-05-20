@@ -85,25 +85,29 @@ const handleSubmit = async (e) => {
     console.log('before login : ', formData);
 
     try {
+        
     const res = await axios.post('/api/login', formData);
     
     console.log('after login : ', res.data?.user);
     
     setUserData(res.data?.user);
 
-    if (rememberMe) {
-        localStorage.setItem('authData', JSON.stringify(formData));
-    } else {
-        localStorage.removeItem('authData');
+    if(res.data?.user){
+
+        if (rememberMe) {
+            localStorage.setItem('authData', JSON.stringify(formData));
+        } else {
+            localStorage.removeItem('authData');
+        }
+
+        toast({
+            title: "Welcome back!",
+            description: "You have been successfully logged in",
+        });
+
+        navigate('/dashboard');
     }
-    
-    toast({
-        title: "Success!",
-        description: "You have successfully logged in",
-    });
-    
-    navigate('/dashboard');
-    
+
     } catch (err) {
     console.error(err);
     toast({

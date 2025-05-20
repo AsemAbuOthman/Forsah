@@ -1,27 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Smile, Paperclip, Send, Image, File, X, CornerUpLeft, Check, Clock, MoreVertical, Reply, Trash2 } from 'lucide-react';
+import io from 'socket.io-client';
+import { debounce } from 'lodash';
 
-/**
- * A complete messaging component that can be easily imported and used in any project
- * Features:
- * - Contact list with online status
- * - Conversation view with message bubbles
- * - File and image sharing
- * - Message deletion
- * - Reply to specific messages
- * - Emoji picker
- * - Message search functionality
- * 
- * @param {Object} props
- * @param {Object} props.user - Current user object with id, name, avatar
- * @param {Array} props.initialContacts - Array of contact objects 
- * @param {Object} props.initialMessages - Object of conversations keyed by contact ID
- * @param {Function} props.onSendMessage - Optional callback when a message is sent
- * @param {Function} props.onDeleteMessage - Optional callback when a message is deleted
- * @param {Function} props.onProfileView - Optional callback when viewing a contact's profile
- * @param {boolean} props.useRealWebSocket - Whether to use real WebSocket connection (default: false)
- * @param {string} props.webSocketUrl - WebSocket URL if using real connection
- */
 const MessagingComponent = ({ 
   user = { 
     id: 1, 
@@ -33,8 +14,8 @@ const MessagingComponent = ({
   onSendMessage,
   onDeleteMessage,
   onProfileView,
-  useRealWebSocket = false,
-  webSocketUrl
+  useRealSocket = false,
+  socketUrl = 'http://localhost:3000'
 }) => {
   // State
   const [contacts, setContacts] = useState(initialContacts);
@@ -43,14 +24,12 @@ const MessagingComponent = ({
   const [inputValue, setInputValue] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false);
-  const [showSearchBar, setShowSearchBar] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [replyingTo, setReplyingTo] = useState(null);
-  const [placeholder, setPlaceholder] = useState("Type a message...");
   const [onlineUsers, setOnlineUsers] = useState([]); 
   const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
   
   // Refs
   const typingTimeoutRef = useRef(null);
@@ -59,397 +38,299 @@ const MessagingComponent = ({
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
-  
-  // Initialize WebSocket connection
+
+  // Initialize Socket.IO connection
   useEffect(() => {
-    if (useRealWebSocket) {
-      connectWebSocket();
+    if (useRealSocket) {
+      connectSocket();
       
       return () => {
         if (socketRef.current) {
-          socketRef.current.close();
+          socketRef.current.disconnect();
         }
       };
     }
-  }, [useRealWebSocket, webSocketUrl]);
-  
-  // Connect to WebSocket
-  const connectWebSocket = () => {
-    // If WebSocket is not supported by the browser
-    if (!('WebSocket' in window)) {
-      console.error('WebSocket is not supported by your browser');
-      return;
-    }
-    
+  }, [useRealSocket, socketUrl, user.id]);
+
+  // Connect to Socket.IO
+  const connectSocket = () => {
     try {
-      // Create WebSocket connection
-      const wsUrl = webSocketUrl || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
-      socketRef.current = new WebSocket(wsUrl);
+      const socket = socketUrl 
+        ? io(socketUrl, { 
+            transports: ['websocket'],
+            auth: { token: localStorage.getItem('token') }
+          }) 
+        : io({ 
+            transports: ['websocket'],
+            auth: { token: localStorage.getItem('token') }
+          });
       
-      // Connection opened
-      socketRef.current.addEventListener('open', () => {
-        console.log('WebSocket Connected');
+      socketRef.current = socket;
+
+      // Connection handlers
+      socket.on('connect', () => {
+        console.log('Socket.IO Connected');
         setIsConnected(true);
+        socket.emit('authenticate', { userId: user.id });
       });
-      
-      // Listen for messages
-      socketRef.current.addEventListener('message', (event) => {
-        const data = JSON.parse(event.data);
-        setLastMessage(data);
+
+      socket.on('authenticated', () => {
+        console.log('Socket.IO Authenticated');
       });
-      
-      // Connection closed
-      socketRef.current.addEventListener('close', () => {
-        console.log('WebSocket Disconnected');
+
+      socket.on('new_message', handleIncomingMessage);
+      socket.on('message_delivered', handleDeliveryReceipt);
+      socket.on('message_read', handleReadReceipt);
+      socket.on('typing', handleTypingIndicator);
+      socket.on('online_users', setOnlineUsers);
+      socket.on('user_online', handleUserOnline);
+      socket.on('user_offline', handleUserOffline);
+
+      socket.on('connect_error', (error) => {
+        console.error('Socket.IO Connection Error', error);
         setIsConnected(false);
-        
-        // Attempt to reconnect after delay
-        setTimeout(() => {
-          connectWebSocket();
-        }, 3000);
       });
-      
-      // Connection error
-      socketRef.current.addEventListener('error', (error) => {
-        console.error('WebSocket Error', error);
+
+      socket.on('disconnect', (reason) => {
+        console.log('Socket.IO Disconnected', reason);
+        setIsConnected(false);
+        if (reason !== 'io client disconnect') {
+          setTimeout(connectSocket, 3000);
+        }
+      });
+
+      socket.on('error', (error) => {
+        console.error('Socket.IO Error:', error);
       });
     } catch (error) {
-      console.error('WebSocket initialization error', error);
+      console.error('Socket.IO initialization error', error);
     }
   };
-  
-  // Send message through WebSocket
-  const sendWebSocketMessage = (message) => {
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify(message));
-      return true;
-    }
-    return false;
-  };
-  
-  // Handle WebSocket messages
-  useEffect(() => {
-    if (lastMessage && useRealWebSocket) {
-      console.log('Received message:', lastMessage);
+
+  // Handle incoming messages
+  const handleIncomingMessage = useCallback((message) => {
+    const newMessage = {
+      id: message.id,
+      senderId: message.senderId,
+      text: message.content.text,
+      image: message.content.image,
+      file: message.content.file,
+      timestamp: new Date(message.timestamp).toLocaleTimeString(),
+      status: 'delivered',
+      replyingTo: message.replyingTo
+    };
+
+    if (activeContact?.id === message.senderId) {
+      setMessages(prev => [...prev, newMessage]);
+      scrollToBottom();
       
-      switch (lastMessage.type) {
-        case 'message':
-          if (activeContact && lastMessage.from === activeContact.id) {
-            // Add new message to conversation
-            setMessages(prev => [...prev, {
-              id: lastMessage.id,
-              senderId: lastMessage.from,
-              text: lastMessage.content,
-              timestamp: 'Just now',
-              status: 'read'
-            }]);
-            
-            // Mark as read
-            if (lastMessage.from) {
-              sendWebSocketMessage({
-                type: 'read',
-                to: lastMessage.from,
-                messageId: lastMessage.id
-              });
-            }
-          } else {
-            // Update unread count for contact
-            setContacts(prev => prev.map(contact => 
-              contact.id === lastMessage.from
-                ? { ...contact, unreadCount: (contact.unreadCount || 0) + 1, lastMessage: lastMessage.content }
-                : contact
-            ));
-          }
-          break;
-          
-        case 'typing':
-          if (lastMessage.isTyping) {
-            // Show typing indicator
-            setContacts(prev => prev.map(contact => 
-              contact.id === lastMessage.from
-                ? { ...contact, typing: true }
-                : contact
-            ));
-          } else {
-            // Hide typing indicator
-            setContacts(prev => prev.map(contact => 
-              contact.id === lastMessage.from
-                ? { ...contact, typing: false }
-                : contact
-            ));
-          }
-          break;
-          
-        case 'read':
-          // Update message status to read
-          if (activeContact && lastMessage.from === activeContact.id) {
-            setMessages(prev => prev.map(msg => 
-              msg.id === lastMessage.messageId
-                ? { ...msg, status: 'read' }
-                : msg
-            ));
-          }
-          break;
+      // Send read receipt if this is the active conversation
+      if (isConnected) {
+        socketRef.current.emit('mark_read', {
+          messageId: message.id,
+          senderId: message.senderId
+        });
       }
+    } else {
+      // Update contact's last message
+      setContacts(prev => prev.map(contact => 
+        contact.id === message.senderId
+          ? { 
+              ...contact, 
+              unreadCount: (contact.unreadCount || 0) + 1,
+              lastMessage: message.content.text || (message.content.image ? '[Image]' : '[File]'),
+              timestamp: new Date(message.timestamp).toLocaleTimeString()
+            }
+          : contact
+      ));
     }
-  }, [lastMessage, activeContact]);
-  
+  }, [activeContact, isConnected]);
+
+  // Handle delivery receipts
+  const handleDeliveryReceipt = useCallback(({ messageId }) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, status: 'delivered' } : msg
+    ));
+  }, []);
+
+  // Handle read receipts
+  const handleReadReceipt = useCallback(({ messageId }) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId ? { ...msg, status: 'read' } : msg
+    ));
+  }, []);
+
+  // Handle typing indicators
+  const handleTypingIndicator = useCallback(({ senderId, isTyping }) => {
+    setContacts(prev => prev.map(contact => 
+      contact.id === senderId ? { ...contact, typing: isTyping } : contact
+    ));
+  }, []);
+
+  // Handle user online status
+  const handleUserOnline = useCallback(({ userId }) => {
+    setOnlineUsers(prev => [...new Set([...prev, userId])]);
+  }, []);
+
+  // Handle user offline status
+  const handleUserOffline = useCallback(({ userId }) => {
+    setOnlineUsers(prev => prev.filter(id => id !== userId));
+  }, []);
+
+  // Send typing indicator with debounce
+  const sendTypingIndicator = useCallback(debounce((isTyping) => {
+    if (isConnected && activeContact) {
+      socketRef.current.emit('typing', {
+        receiverId: activeContact.id,
+        isTyping
+      });
+    }
+    setIsTyping(false);
+  }, 1000), [isConnected, activeContact]);
+
+  // Handle input changes with typing indicator
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setInputValue(value);
+    
+    if (value.trim() && !isTyping) {
+      setIsTyping(true);
+      sendTypingIndicator(true);
+    } else if (!value.trim() && isTyping) {
+      sendTypingIndicator(false);
+    }
+  };
+
   // Select a contact to chat with
   const handleContactSelect = (contact) => {
     setActiveContact(contact);
-    
-    // Load conversation history for the selected contact
-    if (initialMessages[contact.id]) {
-      setMessages(initialMessages[contact.id]);
-    } else {
-      setMessages([]);
-    }
+    setMessages(initialMessages[contact.id] || []);
+    setSelectedMessageId(null);
+    setReplyingTo(null);
     
     // Reset unread count
     setContacts(prev => prev.map(c => 
-      c.id === contact.id
-        ? { ...c, unreadCount: 0 }
-        : c
+      c.id === contact.id ? { ...c, unreadCount: 0 } : c
     ));
     
-    // Tell server we've read messages from this contact
-    if (isConnected && useRealWebSocket) {
-      sendWebSocketMessage({
-        type: 'identify',
-        userId: user.id
+    // Notify server of conversation change
+    if (isConnected) {
+      socketRef.current.emit('conversation_opened', { 
+        contactId: contact.id 
       });
     }
   };
-  
-  // Send a new message (text, image, or file)
+
+  // Send a new message
   const handleSendMessage = () => {
-    if (!activeContact) return;
-    if (typeof inputValue === 'string' && inputValue.trim() === '') return;
-    
-    let newMessage;
-    let contentForContact;
-    let contentForWebSocket;
-    
-    // Generate a unique ID for the message
-    const messageId = Date.now();
-    
-    // Handle different message types (text, image, file)
+    if (!activeContact || !inputValue) return;
+
+    const messageId = Date.now().toString();
+    let messageContent = {};
+    let tempMessage = {
+      id: messageId,
+      senderId: 'me',
+      timestamp: new Date().toLocaleTimeString(),
+      status: 'sending',
+      replyingTo: replyingTo?.id ? {
+        id: replyingTo.id,
+        senderId: replyingTo.senderId,
+        text: replyingTo.text || (replyingTo.image ? '[Image]' : '[File]')
+      } : null
+    };
+
     if (typeof inputValue === 'object') {
-      // It's an image or file message
+      // File or image message
       if (inputValue.type === 'image') {
-        newMessage = {
-          id: messageId,
-          senderId: 'me',
-          text: '', // Remove the text description
-          image: {
-            url: inputValue.url,
-            name: inputValue.name,
-            size: inputValue.size
-          },
-          timestamp: 'Just now',
-          status: 'sending',
-          replyingTo: replyingTo // Include the message being replied to (if any)
-        };
-        contentForContact = `[Image]`;
-        contentForWebSocket = JSON.stringify({
-          messageType: 'image',
-          filename: inputValue.name,
-          url: inputValue.url,
-          replyToId: replyingTo ? replyingTo.id : null
-        });
+        messageContent = { image: inputValue };
+        tempMessage = { ...tempMessage, image: inputValue };
       } else {
-        newMessage = {
-          id: messageId,
-          senderId: 'me',
-          text: '', // Remove the text description
-          file: {
-            url: inputValue.url,
-            name: inputValue.name,
-            size: inputValue.size,
-            contentType: inputValue.contentType
-          },
-          timestamp: 'Just now',
-          status: 'sending',
-          replyingTo: replyingTo // Include the message being replied to (if any)
-        };
-        contentForContact = `[File]`;
-        contentForWebSocket = JSON.stringify({
-          messageType: 'file',
-          filename: inputValue.name,
-          url: inputValue.url,
-          replyToId: replyingTo ? replyingTo.id : null
-        });
+        messageContent = { file: inputValue };
+        tempMessage = { ...tempMessage, file: inputValue };
       }
     } else {
-      // It's a regular text message
-      newMessage = {
-        id: messageId,
-        senderId: 'me',
-        text: inputValue,
-        timestamp: 'Just now',
-        status: 'sending',
-        replyingTo: replyingTo // Include the message being replied to (if any)
-      };
-      contentForContact = inputValue;
-      contentForWebSocket = replyingTo ? 
-        JSON.stringify({
-          messageType: 'text',
-          content: inputValue,
-          replyToId: replyingTo.id
-        }) : 
-        inputValue;
+      // Text message
+      messageContent = { text: inputValue };
+      tempMessage = { ...tempMessage, text: inputValue };
     }
-    
-    // Add message to conversation
-    setMessages(prev => [...prev, newMessage]);
-    
+
+    // Optimistic update
+    setMessages(prev => [...prev, tempMessage]);
+    scrollToBottom();
+
     // Update contact's last message
+    const lastMessage = typeof inputValue === 'object' 
+      ? inputValue.type === 'image' ? '[Image]' : '[File]'
+      : inputValue;
+
     setContacts(prev => prev.map(contact => 
       contact.id === activeContact.id
-        ? { ...contact, lastMessage: contentForContact, timestamp: 'Just now' }
+        ? { ...contact, lastMessage, timestamp: new Date().toLocaleTimeString() }
         : contact
     ));
-    
-    // Send message via WebSocket if connected
-    if (isConnected && useRealWebSocket) {
-      sendWebSocketMessage({
-        type: 'message',
-        to: activeContact.id,
-        content: contentForWebSocket
+
+    // Send via Socket.IO
+    if (isConnected) {
+      socketRef.current.emit('send_message', {
+        receiverId: activeContact.id,
+        content: messageContent,
+        tempId: messageId,
+        replyingTo: tempMessage.replyingTo
+      }, (response) => {
+        if (response?.error) {
+          console.error('Failed to send message:', response.error);
+          updateMessageStatus(messageId, 'failed');
+        } else {
+          updateMessageStatus(messageId, 'sent', response.messageId);
+        }
       });
     }
-    
+
     // Call callback if provided
     if (onSendMessage) {
-      onSendMessage(newMessage, activeContact);
+      onSendMessage(tempMessage, activeContact);
     }
-    
-    // Clear input field and reset any selected files
+
+    // Reset input
+    resetInput();
+  };
+
+  // Update message status
+  const updateMessageStatus = (tempId, status, serverId = null) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === tempId
+        ? { ...msg, id: serverId || msg.id, status }
+        : msg
+    ));
+  };
+
+  // Reset input fields
+  const resetInput = () => {
     setInputValue('');
+    setSelectedFile(null);
+    setReplyingTo(null);
     setShowEmojiPicker(false);
     setShowAttachmentOptions(false);
-    setReplyingTo(null);
-    setSelectedFile(null);
-    
-    // Reset the placeholder text
-    setPlaceholder("Type a message...");
-    
-    // Clear typing indicator
-    clearTimeout(typingTimeoutRef.current);
-    if (useRealWebSocket) {
-      sendWebSocketMessage({
-        type: 'typing',
-        to: activeContact.id,
-        isTyping: false
-      });
-    }
+    sendTypingIndicator(false);
   };
-  
-  // Handle typing indicator and message input changes
-  const handleInputChange = (value) => {
-    setInputValue(value);
-    
-    // Only send typing indicators for text messages, not for file/image uploads
-    if (isConnected && activeContact && typeof value === 'string' && useRealWebSocket) {
-      // Reset placeholder if user starts typing
-      if (value.trim() !== '') {
-        setPlaceholder("Type a message...");
-      }
-      
-      // Clear previous timeout
-      clearTimeout(typingTimeoutRef.current);
-      
-      // Send typing indicator
-      sendWebSocketMessage({
-        type: 'typing',
-        to: activeContact.id,
-        isTyping: value.trim() !== ''
-      });
-      
-      // Set timeout to clear typing indicator after 2 seconds
-      typingTimeoutRef.current = setTimeout(() => {
-        sendWebSocketMessage({
-          type: 'typing',
-          to: activeContact.id,
-          isTyping: false
-        });
-      }, 2000);
-    }
-  };
-  
+
   // Handle file selection
   const handleFileSelection = (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      
-      // Create a file URL for preview
       const fileUrl = URL.createObjectURL(file);
-      
-      // Store the file info in the message data
       setInputValue({
-        type: 'file',
+        type: file.type.includes('image/') ? 'image' : 'file',
         name: file.name,
         size: file.size,
         url: fileUrl,
         contentType: file.type
       });
-      
-      // Update placeholder text
-      setPlaceholder("File ready to send");
-      
       setShowAttachmentOptions(false);
     }
   };
-  
-  // Handle image selection
-  const handleImageSelection = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.includes('image/')) {
-        alert('Please select an image file');
-        return;
-      }
-      
-      setSelectedFile(file);
-      
-      // Create an image URL for preview
-      const imageUrl = URL.createObjectURL(file);
-      
-      // Store the image info in the message data
-      setInputValue({
-        type: 'image',
-        name: file.name,
-        size: file.size,
-        url: imageUrl,
-        contentType: file.type
-      });
-      
-      // Update placeholder text
-      setPlaceholder("Image ready to send");
-      
-      setShowAttachmentOptions(false);
-    }
-  };
-  
-  // Toggle emoji picker
-  const toggleEmojiPicker = () => {
-    setShowEmojiPicker(!showEmojiPicker);
-    setShowAttachmentOptions(false);
-  };
-  
-  // Toggle attachment options
-  const toggleAttachmentOptions = () => {
-    setShowAttachmentOptions(!showAttachmentOptions);
-    setShowEmojiPicker(false);
-  };
-  
-  // Handle emoji selection
-  const handleEmojiSelect = (emoji) => {
-    setInputValue(typeof inputValue === 'string' ? inputValue + emoji : emoji);
-    inputRef.current?.focus();
-  };
-  
+
   // Handle key press in input field
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -457,43 +338,37 @@ const MessagingComponent = ({
       handleSendMessage();
     }
   };
-  
+
   // Handle deleting a message
   const handleDeleteMessage = (messageId) => {
-    // Remove the message from the conversation
-    setMessages(prev => prev.filter(message => message.id !== messageId));
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
     
-    // Call callback if provided
+    if (isConnected) {
+      socketRef.current.emit('delete_message', { messageId });
+    }
+
     if (onDeleteMessage) {
       onDeleteMessage(messageId, activeContact);
     }
-    
-    // Add a system message to indicate the message was deleted
-    const systemMessage = {
-      id: Date.now(),
-      senderId: 'system',
-      text: 'You deleted a message',
-      timestamp: 'Just now',
-      status: 'read'
-    };
-    
-    // Add system message to conversation
-    setMessages(prev => [...prev, systemMessage]);
   };
-  
-  // Handle replying to a message
-  const handleReplyMessage = (message) => {
-    // Set the message being replied to
-    setReplyingTo(message);
-    // Focus on the input field
-    inputRef.current?.focus();
+
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesListRef.current?.scrollTo({
+        top: messagesListRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 100);
   };
-  
-  // Cancel replying to a message
-  const handleCancelReply = () => {
-    setReplyingTo(null);
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
-  
+
   return (
     <div className="bg-white rounded-lg shadow-lg flex flex-col md:flex-row h-[calc(100vh-150px)]">
       {/* Contact list sidebar */}
@@ -585,15 +460,7 @@ const MessagingComponent = ({
               <div className="flex items-center">
                 <button 
                   className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
-                  onClick={() => setShowSearchBar(!showSearchBar)}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
-                <button 
-                  className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
-                  onClick={() => onProfileView ? onProfileView(activeContact) : null}
+                  onClick={() => onProfileView?.(activeContact)}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -602,30 +469,11 @@ const MessagingComponent = ({
               </div>
             </div>
             
-            {/* Message search panel */}
-            {showSearchBar && (
-              <div className="p-3 border-b border-gray-200 bg-gray-50">
-                <div className="flex items-center">
-                  <button 
-                    className="p-1 mr-2 text-gray-500"
-                    onClick={() => {
-                      setShowSearchBar(false);
-                      setSelectedMessageId(null);
-                    }}
-                  >
-                    <X size={18} />
-                  </button>
-                  <input 
-                    type="text" 
-                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search in conversation" 
-                  />
-                </div>
-              </div>
-            )}
-            
             {/* Messages list */}
-            <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+            <div 
+              ref={messagesListRef}
+              className="flex-1 p-4 overflow-y-auto bg-gray-50"
+            >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-2">
@@ -638,23 +486,15 @@ const MessagingComponent = ({
                 </div>
               ) : (
                 messages.map((message, index) => {
-                  const { id, senderId, text, timestamp, status, highlightedText, image, file, replyingTo } = message;
+                  const { id, senderId, text, timestamp, status, image, file, replyingTo } = message;
                   const isMe = senderId === 'me';
-                  const isSystem = senderId === 'system';
                   const isConsecutive = index > 0 && messages[index - 1].senderId === senderId;
                   
-                  if (isSystem) {
-                    return (
-                      <div key={id} className="flex justify-center my-4">
-                        <div className="bg-blue-50 text-blue-800 px-4 py-2 rounded-lg text-sm border border-blue-200 max-w-[80%]">
-                          {text}
-                        </div>
-                      </div>
-                    );
-                  }
-                  
                   return (
-                    <div key={id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 ${isConsecutive ? 'mt-1' : 'mt-3'}`}>
+                    <div 
+                      key={id} 
+                      className={`flex ${isMe ? 'justify-end' : 'justify-start'} mb-2 ${isConsecutive ? 'mt-1' : 'mt-3'}`}
+                    >
                       <div className={`max-w-[70%] ${isMe ? 'order-1' : 'order-2'}`}>
                         {!isConsecutive && !isMe && (
                           <div className="flex items-center mb-1">
@@ -712,15 +552,15 @@ const MessagingComponent = ({
                           )}
                           
                           {/* Replied message reference */}
-                          {message.replyingTo && (
+                          {replyingTo && (
                             <div className={`mb-1 px-3 py-1 text-xs rounded-t-lg border-l-2 ${
                               isMe ? 'bg-blue-700 border-blue-400' : 'bg-gray-100 border-gray-300'
                             }`}>
                               <div className={`font-medium mb-0.5 ${isMe ? 'text-white' : 'text-gray-700'}`}>
-                                {message.replyingTo.senderId === 'me' ? 'You' : activeContact.name}
+                                {replyingTo.senderId === 'me' ? 'You' : activeContact.name}
                               </div>
                               <div className={`truncate ${isMe ? 'text-blue-200' : 'text-gray-500'}`}>
-                                {message.replyingTo.text || (message.replyingTo.image ? 'Image' : 'File')}
+                                {replyingTo.text || (replyingTo.image ? 'Image' : 'File')}
                               </div>
                             </div>
                           )}
@@ -731,7 +571,7 @@ const MessagingComponent = ({
                             ${isConsecutive ? (isMe ? 'rounded-tr-md' : 'rounded-tl-md') : ''} 
                             ${isMe ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200'}
                             ${selectedMessageId === id ? 'ring-2 ring-yellow-400' : ''}
-                            ${message.replyingTo ? (isMe ? 'rounded-tl-none' : 'rounded-tr-none') : ''}
+                            ${replyingTo ? (isMe ? 'rounded-tl-none' : 'rounded-tr-none') : ''}
                           `}>
                             {/* Image message */}
                             {image && (
@@ -772,12 +612,8 @@ const MessagingComponent = ({
                               </div>
                             )}
                             
-                            {/* Text content - only show if there's text */}
-                            {text && (
-                              <p className="mb-1">
-                                {highlightedText ? highlightedText : text}
-                              </p>
-                            )}
+                            {/* Text content */}
+                            {text && <p className="mb-1">{text}</p>}
                             
                             {/* Message timestamp and status */}
                             <div className={`text-xs flex items-center justify-end ${isMe ? 'text-white/70' : 'text-gray-500'}`}>
@@ -819,7 +655,7 @@ const MessagingComponent = ({
                     <CornerUpLeft size={16} className="mr-2 text-blue-500" />
                     <div>
                       <div className="text-xs font-medium text-gray-700">
-                        Replying to {replyingTo.senderId === 'me' ? 'yourself' : activeContact?.name}
+                        Replying to {replyingTo.senderId === 'me' ? 'yourself' : activeContact.name}
                       </div>
                       <div className="text-xs text-gray-500 truncate max-w-[200px]">
                         {replyingTo.text || (replyingTo.image ? 'Image' : 'File')}
@@ -827,7 +663,7 @@ const MessagingComponent = ({
                     </div>
                   </div>
                   <button 
-                    onClick={handleCancelReply}
+                    onClick={() => setReplyingTo(null)}
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <X size={16} />
@@ -846,7 +682,7 @@ const MessagingComponent = ({
                 type="file" 
                 ref={imageInputRef} 
                 accept="image/*" 
-                onChange={handleImageSelection} 
+                onChange={handleFileSelection} 
                 className="hidden" 
               />
               
@@ -868,7 +704,10 @@ const MessagingComponent = ({
                       "🤣", "😉", "🫡", "🥳", "🤝", "👏", "🙌", "💯"].map(emoji => (
                       <button 
                         key={emoji} 
-                        onClick={() => handleEmojiSelect(emoji)}
+                        onClick={() => {
+                          setInputValue(prev => (typeof prev === 'string' ? prev : '') + emoji);
+                          inputRef.current?.focus();
+                        }}
                         className="hover:bg-gray-100 rounded p-1 text-xl"
                       >
                         {emoji}
@@ -924,8 +763,7 @@ const MessagingComponent = ({
                     <button 
                       onClick={() => {
                         setSelectedFile(null);
-                        setInputValue(''); // Clear the input value
-                        setPlaceholder("Type a message..."); // Reset placeholder
+                        setInputValue('');
                       }}
                       className="text-gray-400 hover:text-gray-600"
                     >
@@ -934,10 +772,10 @@ const MessagingComponent = ({
                   </div>
                   
                   {/* Image preview */}
-                  {selectedFile.type.includes('image/') && typeof inputValue === 'object' && inputValue.type === 'image' && (
+                  {selectedFile.type.includes('image/') && (
                     <div className="relative w-full h-32 bg-gray-100 rounded overflow-hidden mb-1">
                       <img 
-                        src={inputValue.url} 
+                        src={URL.createObjectURL(selectedFile)} 
                         alt="Preview" 
                         className="object-contain w-full h-full"
                       />
@@ -948,14 +786,14 @@ const MessagingComponent = ({
               
               <div className="flex items-center bg-gray-100 rounded-lg p-1">
                 <button 
-                  onClick={toggleEmojiPicker}
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   className={`p-2 text-gray-500 hover:text-gray-700 rounded-full ${showEmojiPicker ? 'bg-gray-200' : ''}`}
                 >
                   <Smile size={20} />
                 </button>
                 
                 <button 
-                  onClick={toggleAttachmentOptions}
+                  onClick={() => setShowAttachmentOptions(!showAttachmentOptions)}
                   className={`p-2 text-gray-500 hover:text-gray-700 rounded-full ${showAttachmentOptions ? 'bg-gray-200' : ''}`}
                 >
                   <Paperclip size={20} />
@@ -965,16 +803,17 @@ const MessagingComponent = ({
                   ref={inputRef}
                   type="text" 
                   value={typeof inputValue === 'object' ? '' : inputValue} 
-                  onChange={(e) => handleInputChange(e.target.value)}
+                  onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={placeholder} 
+                  placeholder="Type a message..." 
                   disabled={typeof inputValue === 'object'}
                   className="flex-1 py-2 px-3 bg-transparent focus:outline-none text-gray-700"
                 />
                 
                 <button 
                   onClick={handleSendMessage}
-                  className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700"
+                  disabled={!inputValue}
+                  className={`p-2 rounded-full ${inputValue ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
                 >
                   <Send size={20} />
                 </button>
@@ -995,13 +834,6 @@ const MessagingComponent = ({
       </div>
     </div>
   );
-};
-
-// Helper function to format file size
-const formatFileSize = (bytes) => {
-  if (bytes < 1024) return bytes + ' B';
-  else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  else return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 };
 
 export default MessagingComponent;

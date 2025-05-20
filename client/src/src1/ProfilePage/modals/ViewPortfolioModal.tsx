@@ -25,7 +25,7 @@ export function ViewPortfolioModal({
 }: ViewPortfolioModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full max-w-6xl max-h-[95vh] overflow-y-auto rounded-2xl p-6 bg-white shadow-xl">
+      <DialogContent className="w-full max-w-6xl max-h-[95vh] overflow-y-auto rounded-2xl p-6 bg-white shadow-xl ">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-bold text-gray-900">

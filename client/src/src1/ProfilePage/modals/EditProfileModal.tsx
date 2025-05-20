@@ -30,12 +30,21 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [userData, setUserData] = useContext(UserContext);
+
   const updateUserMutation = useMutation({
     mutationFn: (userDetails: Partial<User>) => {
-
       return updateUserProfile(user.userId, userDetails);
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      // Update the user context
+      setUserData((prev: User) => ({
+        ...prev,
+        ...updatedUser,
+      }));
+
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
+
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
@@ -43,7 +52,6 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
       onClose();
     },
     onError: (error) => {
-      // queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
       toast({
         title: "Failed to update profile",
         description: "There was an error updating your profile.",
@@ -52,7 +60,7 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
       console.error("Error updating profile:", error);
     },
   });
-  
+    
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -73,7 +81,7 @@ export function EditProfileModal({ user, isOpen, onClose }: EditProfileModalProp
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] transition-all hover:scale-125 duration-300 scale-100">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <Button 

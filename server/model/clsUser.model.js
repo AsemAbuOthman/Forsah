@@ -8,20 +8,27 @@ class clsUser{
         let result = null;
 
         try {
+            let isClosed = await closeConnection();
+
+            console.log('isClosed : ', isClosed);
             
-            await closeConnection();
-            
-            if(await pool === null)
+
+            if(isClosed)
             {
-                console.log('Connection closed successfully .' + err);
+                console.log('Connection closed successfully .' );
                 result = {message : 'Connection closed successfully .'};
+            }else if(global.pool === null){
+
+                result = {message : 'Connection already closed .'};
             }
         } catch (err) {
             
             console.log('Connection closing failed ! ' + err);
+        }finally{
+
+            return result; 
         }
 
-        return result; 
     }
 
     static async getProfile(id){
@@ -30,9 +37,9 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
                 SELECT * FROM users 
                     INNER JOIN languages ON languages.languageId = users.languageId
                     INNER JOIN currencies ON currencies.currencyId = users.currencyId
@@ -51,7 +58,6 @@ class clsUser{
         } catch (err) {
             
             console.log('User Profile : ' + err);
-            result = null;
         }
 
         return result; 
@@ -63,9 +69,9 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
 
                 DECLARE @profileId INT;
 
@@ -106,10 +112,10 @@ class clsUser{
         let result = null;
     
         try {
-        pool = await getConnection();
+            const pool = await getConnection();
     
         // 1. Get basic project info
-        const portfoliosResult = await pool.query`
+        const portfoliosResult = await pool.request().query`
             SELECT 
             p.portfolioId,
             p.userId,
@@ -132,7 +138,7 @@ class clsUser{
         const projectIds = portfolios.map(p => p.sampleProjectId);
     
         // 2. Get images
-        const imagesResult = await pool.query`
+        const imagesResult = await pool.request().query`
             SELECT 
             i.imageId, 
             i.imageUrl, 
@@ -152,7 +158,7 @@ class clsUser{
         }, {});
     
         // 3. Get skills (joined)
-        const skillsResult = await pool.query`
+        const skillsResult = await pool.request().query`
             SELECT 
             sps.sampleProjectSkillId,
             sps.sampleProjectId,
@@ -214,10 +220,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting *');
 
-            result = await pool.query`
+            result = await pool.request().query`
                 SELECT * FROM userSkills
                     INNER JOIN skills ON userSkills.skillId = skills.skillId
                     INNER JOIN categories ON categories.categoryId = skills.categoryId
@@ -245,10 +251,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting *');
 
-            result= await pool.query`
+            result= await pool.request().query`
                 SELECT * FROM experiences WHERE userId = ${id}
                 `;
 
@@ -273,10 +279,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await pool.query`
+            result = await pool.request().query`
                 SELECT * FROM certifications WHERE userId = ${id}
                 `;
                 
@@ -299,10 +305,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting * :::::::: ', certificationId, ' --- ',newData);
 
-            result = await pool.query`
+            result = await pool.request().query`
                 UPDATE certifications 
                     SET certificationTitle = ${newData.certificationTitle},
                         certificationOrganization = ${newData.certificationOrganization},
@@ -334,10 +340,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await pool.query`
+            result = await pool.request().query`
 
                 DELETE FROM certifications 
                     OUTPUT DELETED.userId
@@ -363,11 +369,11 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting *');
 
 
-            result = await pool.query`
+            result = await pool.request().query`
                 SELECT * FROM educations WHERE userId = ${id}
                 `;
                 
@@ -392,24 +398,21 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting', );
 
-
-            result = await pool.query`
+            result = await pool.request().query`
                 SELECT userId
                 FROM USERS 
                 WHERE email = ${email} 
                 AND password = ${password}
                 `;
-
             
             result = await this.getProfile(result.recordset[0].userId);
 
         } catch (err) {
             
             console.log('User : ' + err);
-            result = null;
         }
 
         return result; 
@@ -421,9 +424,9 @@ class clsUser{
 
 
         try {
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`SELECT countryId as value, countryName as label, ISO as code FROM COUNTRIES`;
+            result = await pool.request().query`SELECT countryId as value, countryName as label, ISO as code FROM COUNTRIES`;
 
             result = result.recordsets;
         } catch (error) {
@@ -440,9 +443,9 @@ class clsUser{
         let result = null;
 
         try {
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`SELECT categoryId as value, categoryName as label FROM CATEGORIES`;
+            result = await pool.request().query`SELECT categoryId as value, categoryName as label FROM CATEGORIES`;
 
             result = result.recordsets;
         } catch (error) {
@@ -459,9 +462,9 @@ class clsUser{
         let result = null;
 
         try {
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`SELECT skillId, skillName, categoryName, skills.categoryId 
+            result = await pool.request().query`SELECT skillId, skillName, categoryName, skills.categoryId 
                                         FROM categories 
                                         INNER JOIN skills ON skills.categoryId = categories.categoryId
                                         ORDER BY categories.categoryId, skillName`;
@@ -504,9 +507,9 @@ class clsUser{
         let result = null;
 
         try {
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`SELECT currencyId as value, code as label, symbol FROM CURRENCIES`;
+            result = await pool.request().query`SELECT currencyId as value, code as label, symbol FROM CURRENCIES`;
 
             result = result.recordsets;
         } catch (error) {
@@ -528,9 +531,9 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             
-            result = await pool.query`
+            result = await pool.request().query`
 
             DECLARE @newUserId INT;
 
@@ -560,7 +563,7 @@ class clsUser{
             
                 for (const interest of user.interests) {
                     // Step 1: Get all skills for that category
-                    const skillResult = await pool.query`
+                    const skillResult = await pool.request().query`
                         SELECT skillId FROM SKILLS WHERE categoryId = ${interest.value}
                     `;
             
@@ -571,7 +574,7 @@ class clsUser{
             
                     // Step 3: Insert skills into USER_SKILLS
                     if (skillValues) {
-                        await pool.query(`
+                        await pool.request().query(`
                             INSERT INTO USERSKILLS (userId, skillId)
                             VALUES ${skillValues}
                         `);
@@ -597,9 +600,9 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
                 DECLARE @newPortfolioId INT;
                 
                 INSERT INTO portfolios (userId)
@@ -636,7 +639,7 @@ class clsUser{
 
                 for (const interest of newData.skillId) {
                     // Step 1: Get all skills for that category
-                    const skillResult = await pool.query`
+                    const skillResult = await pool.request().query`
                         SELECT skillId FROM SKILLS WHERE categoryId = ${interest.value}
                     `;          
             
@@ -674,9 +677,9 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
                 INSERT INTO certifications 
                     (userId, certificationTitle, certificationOrganization, startDate, endDate, certificationUrl)
                 VALUES(${newData.userId},${newData.certificationTitle},${newData.certificationOrganization},${newData.startDate},${newData.endDate},${newData.certificationUrl})
@@ -700,9 +703,9 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
                 INSERT INTO experiences 
                     (userId, experienceTitle, experienceDescription, experienceCompanyName, startDate, endDate)
                 VALUES(${newData.userId},${newData.experienceTitle},${newData.experienceDescription},${newData.experienceCompanyName},${newData.startDate},${newData.endDate})
@@ -724,10 +727,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting * :::::::: ', experienceId, ' --- ', newData);
 
-            result = await pool.query`
+            result = await pool.request().query`
                 UPDATE experiences 
                     SET experienceTitle = ${newData.experienceTitle},
                         experienceDescription = ${newData.experienceDescription},
@@ -759,10 +762,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await pool.query`
+            result = await pool.request().query`
 
                 DELETE FROM experiences 
                     OUTPUT DELETED.userId
@@ -789,9 +792,9 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
                 INSERT INTO educations 
                     (userId, educationDegree, educationOrganization, startDate, endDate, educationDescription)
                 VALUES(${newData.userId},${newData.educationDegree},${newData.educationOrganization},${newData.startDate},${newData.endDate}, ${newData.educationDescription})
@@ -813,10 +816,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting * :::::::: ', educationId, ' --- ', newData);
 
-            result = await pool.query`
+            result = await pool.request().query`
                 UPDATE educations 
                     SET educationDegree = ${newData.educationDegree},
                         educationOrganization = ${newData.educationOrganization},
@@ -848,10 +851,10 @@ class clsUser{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
             console.log('db connecting * ', id);
 
-            result = await pool.query`
+            result = await pool.request().query`
 
                 DELETE FROM educations 
                     OUTPUT DELETED.userId

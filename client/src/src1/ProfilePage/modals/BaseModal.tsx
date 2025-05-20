@@ -14,7 +14,7 @@ export const BaseModal: React.FC<BaseModalProps> = ({
 }) => {
   return (
     <Dialog open={isOpen} modal={false} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md ">
         {children}
       </DialogContent>
     </Dialog>

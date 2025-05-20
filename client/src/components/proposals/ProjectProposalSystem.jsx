@@ -206,23 +206,23 @@ const ProjectProposalSystem = ({
         />
       )}
       
-      {(isClientView || activeTab === 'proposals' || hasSubmittedProposal) && (
-        <SimpleProposalsList
+      {isClientView ? (
+        <ProposalsList
           projectId={sampleProject.projectId}
           isClientView={isClientView}
           apiUrl={apiUrl}
-          key={refreshProposals} // Force refresh when a new proposal is submitted
+          key={refreshProposals} // Force refresh
         />
+      ) : (
+        (activeTab === 'proposals' || hasSubmittedProposal) && (
+          <SimpleProposalsList
+            projectId={sampleProject.projectId}
+            isClientView={isClientView}
+            apiUrl={apiUrl}
+            key={refreshProposals} // Force refresh
+          />
         )
-        
-        // : ( <SimpleProposalsList
-        //   projectId={sampleProject.projectId}
-        //   isClientView={isClientView}
-        //   apiUrl={apiUrl}
-        //   key={refreshProposals} // Force refresh when a new proposal is submitted
-        // />)
-      
-      }
+      )}
     </div>
   );
 };

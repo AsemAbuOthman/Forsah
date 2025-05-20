@@ -1,5 +1,4 @@
 const { getConnection, closeConnection } = require("../config/clsConfig");
-const {getSkills} = require("../model/clsUser.model");
 
 class clsProposal{
 
@@ -10,9 +9,9 @@ class clsProposal{
 
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
             
                 SELECT 
                 proposals.proposalId,
@@ -23,8 +22,13 @@ class clsProposal{
                 proposals.proposalDescription,
                 proposals.createdAt,
                 proposals.proposalStateId,
+                users.username,
                 users.firstName,
                 users.lastName,
+                users.city,
+                proposals.createdAt[0],
+                users.createdAt as joinedDate,
+                languages.language,
                 countries.countryName,
                 images.imageUrl
 
@@ -33,6 +37,7 @@ class clsProposal{
                 INNER JOIN projects ON proposals.projectId = projects.projectId
                 INNER JOIN users ON users.userId = proposals.userId
                 INNER JOIN countries ON countries.countryId = users.countryId
+                INNER JOIN languages ON languages.languageId = users.languageId
                 INNER JOIN profiles ON profiles.userId = proposals.userId
                 INNER JOIN images ON profiles.profileId = images.imageableId AND images.imageableType = 'profile'
 
@@ -61,17 +66,15 @@ class clsProposal{
         let result = { hasSubmitted : false};
 
         try {
-            pool = await getConnection();
+            const pool = await getConnection();
     
-            result = await pool.query`
+            const queryResult = await pool.request().query`
                 SELECT TOP 1 1 AS isExist
                 FROM proposals
                 WHERE projectId = ${projectId} AND userId = ${freelancerId}
             `;
-    
-            let hasSubmitted = result.recordset.length > 0;
-    
-            result =  { hasSubmitted };
+
+            result.hasSubmitted =  queryResult.recordset.length > 0 ;
         } catch (error) {
 
             console.error('Error checking proposal:', error);
@@ -87,9 +90,9 @@ class clsProposal{
         
         try {
             
-            pool = await getConnection();
+            const pool = await getConnection();
 
-            result = await pool.query`
+            result = await pool.request().query`
             
                 INSERT INTO proposals 
                     (proposalAmount, proposalDescription, proposalDeadline, userId, projectId)
@@ -108,17 +111,18 @@ class clsProposal{
 
 }
 
-(async () => {
+// (async () => {
 
-    try {
+//     try {
         
-        const result = await clsProposal.checkProposal(1073, 2026);
-        console.log('result : ', result.hasSubmitted);
-    } catch (error) {
+//         const result = await clsProposal.checkProposal(1074, 2026);
+//         console.log('result : ', result);
+//     } catch (error) {
         
-        console.log(error);
-    }
+//         console.log(error);
+//     }
     
-})();
+// })();
+
 
 module.exports = clsProposal;

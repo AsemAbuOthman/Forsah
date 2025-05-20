@@ -5,6 +5,7 @@ export default function ProfileMenu() {
 
 
     const menuOptions = [
+        
         { name: "Profile", icon: "bi bi-person-vcard", link: "/dashboard/Profile" },
         { name: "Account analytics", icon: "bi bi-bar-chart-line", link: "/dashboard/account_analytics" },
         { name: "Settings", icon: "bi bi-gear", link: "/dashboard/Settings" },
@@ -13,7 +14,6 @@ export default function ProfileMenu() {
         { name: "Financial dashboard", icon: "bi bi-pie-chart", link: "/dashboard/Financial dashboard" },
         { name: "Support", icon: "bi bi-question-square", link: "/dashboard/Support" },
         { name: "Logout", icon: "bi bi-box-arrow-left", link: "/dashboard/Logout" },
-    
     ];
 
     return (

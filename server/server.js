@@ -1,8 +1,10 @@
 const http = require('http');
+const { Server } = require('socket.io');
 const url = require('url'); 
 const path = require('path');
 const querystring = require('querystring');
-const getRawBody = require('raw-body')
+const getRawBody = require('raw-body');
+
 const { getUser, 
         getCountries, 
         getCurrencies, 
@@ -29,11 +31,13 @@ const { getUser,
         signOut} = require('./controller/clsUser.controller');
 
 const {
+
     createProject,
     getProjects
 } = require('./controller/clsProject.controller');
 
 const{
+
     getFreelancers
 } = require('./controller/clsFreelancer.controller');
 
@@ -44,6 +48,20 @@ const{
     createProposal,
     checkProposals
 } = require('./controller/clsProposal.controller');
+
+
+const{
+
+    createContact,
+    getContacts,
+    sendMessage,
+    replyMessage,
+    getMessageHistory,
+    deleteMessage
+} = require('./controller/clsMessage.controller');
+const { default: axios } = require('axios');
+
+
 
 const server = http.createServer(async (req, res)=>{
 
@@ -69,7 +87,7 @@ const server = http.createServer(async (req, res)=>{
         return; 
     }
 
-    if (pathUrl === '/api/signout')  {
+    if (pathUrl === '/api/logout')  {
 
         return signOut(req, res);
     }
@@ -419,25 +437,10 @@ const server = http.createServer(async (req, res)=>{
         return createProject(req, res, body.toString());
     }
 
-    if (pathUrl.startsWith('/api/proposals/')) {
-
-        const projectIdStr = pathUrl.split('/api/proposals/')[1];
-        const projectId = parseInt(projectIdStr, 10);
-
-        if (isNaN(projectId)) {
-            return res.status(400).send('Invalid porposal ID');
-        }
-    
-        console.log('Parsed proposalId from URL =>', projectId);
-
-        return  getProposals(req, res, projectId);
-    }
-
     if (pathUrl.startsWith('/api/proposals/check')) {
 
         const parsedUrl = url.parse(req.url);
         const queryParams = querystring.parse(parsedUrl.query);
-
         const {
 
             freelancerId,
@@ -445,12 +448,29 @@ const server = http.createServer(async (req, res)=>{
             
         } = queryParams;
 
-        if (isNaN(projectId)) {
-            return res.status(400).send('Invalid porposal ID');
+        if (isNaN(projectId) || isNaN(freelancerId)) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid projectId or freelancerId' }));
         }
 
         return  checkProposals(req, res, projectId, freelancerId);
     }
+
+    if (pathUrl.startsWith('/api/proposals/')) {
+
+        const projectIdStr = pathUrl.split('/api/proposals/')[1];
+        const projectId = parseInt(projectIdStr, 10);
+
+        if (isNaN(projectId) ) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid projectId ' }));
+        }
+    
+        console.log('Parsed proposalId from URL =>', projectId);
+
+        return  getProposals(req, res, projectId);
+    }
+
 
     if (pathUrl.startsWith('/api/proposals') && req.method === 'POST') {
 
@@ -461,10 +481,264 @@ const server = http.createServer(async (req, res)=>{
         return createProposal(req, res, body.toString());
     }
 
+    if(pathUrl === '/api/contact' && req.method === 'POST'){
+
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+
+        const {
+
+            senderId,
+            recevierId
+        } = queryParams;
+
+        console.log('Contact messages request ... : ');
+
+        return createContact(req, res, senderId, recevierId);
+    }
+
+    if(pathUrl.startsWith('/api/contacts/')){
+
+        const userIdStr = pathUrl.split('/api/contacts/')[1];
+        const userId = parseInt(userIdStr, 10);
+
+        if (isNaN(userId) ) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid projectId ' }));
+        }
+    
+        console.log('Parsed userId from URL =>', userId);
+
+        return getContacts(req, res, userId);
+    }
+
+    if(pathUrl === '/api/send' && req.method === 'POST'){
+
+        const body = await getRawBody(req);
+
+        console.log('Send message request ... : ', body.toString());
+
+        return sendMessage(req, res, body.toString());
+    }
+
+    if(pathUrl === '/api/reply' && req.method === 'POST'){
+
+        const body = await getRawBody(req);
+
+        console.log('Reply message request ... : ', body.toString());
+
+        return replyMessage(req, res, body.toString());
+    }
+
+    if(pathUrl === '/api/messages'){
+
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+
+        const senderId = queryParams.userId;
+        const receiverId = queryParams.contactId;
+
+
+        console.log('Fetching messages request ... : ', senderId + ' ' + receiverId );
+
+        return getMessageHistory(req, res, senderId, receiverId);
+    }
+
+    if(pathUrl === '/api/message' && req.method === 'DELETE'){
+
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+
+        const {
+
+            messageId,
+            userId
+
+        } = queryParams;
+
+        console.log('Deleteing message request ... : ');
+
+        return deleteMessage(req, res, messageId, userId);
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'Error', message: 'Not Found' }));
     return;
 })
+
+
+    const io = new Server(server, {
+        cors: {
+            origin: "http://localhost:5173",
+            methods: ["GET", "POST", "DELETE"]
+        },
+        transports: ['websocket', 'polling'],
+        allowEIO3: true
+    });
+    
+    // In-memory storage (replace with a database in production)
+    const userSockets = new Map(); // userId -> socketId
+    const socketUsers = new Map(); // socketId -> userId
+    const activeRooms = new Map(); // userId -> Set of roomIds
+    const messages = new Map(); // conversationId -> Array of messages
+    
+    // Helper function to generate conversation ID
+    const getConversationId = (user1, user2) => [user1, user2].sort().join('_');
+    
+    // Socket.IO connection handler
+    io.on('connection', (socket) => {
+        console.log(`New connection: ${socket.id}`);
+    
+        // Authenticate user
+        socket.on('authenticate', ({ userId, token }) => {
+        if (!userId) {
+            socket.emit('authentication_error', { message: 'Invalid user ID' });
+            return;
+        }
+    
+        // Track user connection
+        userSockets.set(userId, socket.id);
+        socketUsers.set(socket.id, userId);
+    
+        // Join user's personal room
+        socket.join(`user_${userId}`);
+        console.log(`User ${userId} authenticated`);
+    
+        // Notify others this user is online
+        socket.broadcast.emit('user_online', { userId });
+            socket.emit('authenticated', { userId });
+        });
+    
+        // Handle sending messages
+        socket.on('send_message', async (messageData, callback) => {
+            try {
+            const { senderId, receiverId, messageContent } = messageData;
+            const conversationId = getConversationId(senderId, receiverId);
+        
+            console.log('Sending message : ', messageData);
+
+            const savedMessage = (await axios.post('http://localhost:3000/api/send', messageData)).data;
+            if (!savedMessage) {
+                throw new Error('Failed to save message');
+            }
+
+            console.log('savedMessage : ', savedMessage);
+
+
+            const newMessage = {
+                id: savedMessage.messageId,
+                senderId: savedMessage.senderId,
+                receiverId: savedMessage.receiverId,
+                messageContent: savedMessage.messageContent,
+                timestamp: savedMessage.sentAt,
+                status: 'sent',
+            };
+            
+            messages.set(conversationId, [...messages.get(conversationId) || [], newMessage]);
+        
+            // Emit to conversation room
+            io.to(`conversation_${conversationId}`).emit('new_message', newMessage);
+        
+            callback({ 
+                status: 'success', 
+                message: { 
+                ...newMessage,
+                messageId: newMessage.id // Ensure messageId is present
+                } 
+            });
+            } catch (error) {
+            callback({ status: 'error', message: error.message });
+            }
+        });
+        
+        // Add join_conversation handler
+        socket.on('join_conversation', ({ userId, contactId }) => {
+            const conversationId = getConversationId(userId, contactId);
+            socket.join(`conversation_${conversationId}`);
+        });
+        
+
+        // Handle typing indicators
+        socket.on('typing', ({ receiverId, isTyping }) => {
+        const senderId = socketUsers.get(socket.id);
+        if (!senderId) return;
+    
+        const recipientSocketId = userSockets.get(receiverId);
+        if (recipientSocketId) {
+            io.to(recipientSocketId).emit('typing', { senderId, isTyping });
+        }
+        });
+
+        socket.on('mark_read', ({ messageId, senderId, receiverId }) => {
+            const conversationId = getConversationId(senderId, receiverId);
+            const conversationMessages = messages.get(conversationId) || [];
+            
+            const updatedMessages = conversationMessages.map(msg => {
+                if (msg.id === messageId && msg.senderId === receiverId) {
+                    return { ...msg, status: 'read' };
+                }
+                return msg;
+            });
+            
+            messages.set(conversationId, updatedMessages);
+            
+            // Notify sender that their message was read
+            const senderSocketId = userSockets.get(receiverId); // receiverId is actually the sender here
+            if (senderSocketId) {
+            io.to(senderSocketId).emit('message_read', { messageId });
+            }
+        });
+        
+        // Handle message deletion
+        socket.on('delete_message', ({ messageId, senderId, receiverId }) => {
+            const conversationId = getConversationId(senderId, receiverId);
+            const conversationMessages = messages.get(conversationId) || [];
+            
+            const updatedMessages = conversationMessages.filter(msg => msg.id !== messageId);
+            messages.set(conversationId, updatedMessages);
+            
+            // Notify other participant
+            io.to(`conversation_${conversationId}`).emit('message_deleted', { messageId });
+        });
+        
+        // Handle online status requests
+        socket.on('get_online_status', ({ userId }, callback) => {
+            const isOnline = userSockets.has(userId);
+            callback({ isOnline });
+        });
+    
+        // Handle message delivery status
+        socket.on('message_delivered', ({ messageId, receiverId }) => {
+        const senderId = socketUsers.get(socket.id);
+        if (!senderId) return;
+    
+        const recipientSocketId = userSockets.get(receiverId);
+        if (recipientSocketId) {
+            io.to(recipientSocketId).emit('message_delivered', { messageId });
+        }
+        });
+    
+        // Handle disconnection
+        socket.on('disconnect', () => {
+        const userId = socketUsers.get(socket.id);
+        if (!userId) return;
+    
+        console.log(`User ${userId} disconnected`);
+    
+        // Clean up user tracking
+        userSockets.delete(userId);
+        socketUsers.delete(socket.id);
+    
+        // Notify others this user went offline
+        socket.broadcast.emit('user_offline', { userId });
+        });
+    
+        // Error handling
+        socket.on('error', (error) => {
+        console.error(`Socket error (${socket.id}):`, error);
+        });
+    });
+
 
 const port = 3000;
 server.listen(port, (err)=>{
@@ -475,4 +749,6 @@ server.listen(port, (err)=>{
 
         console.log(err);
     }
-})
+});
+
+

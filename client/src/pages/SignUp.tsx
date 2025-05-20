@@ -637,7 +637,7 @@ const renderStep = () => {
                 </label>
                 <Select
                 options={languages}
-                value={formData.languageId}
+                value={formData.languageId }
                 onChange={(value) => {
                     setFormData(prev => ({ ...prev, languageId: value }));
                     if (errors.languageId) {

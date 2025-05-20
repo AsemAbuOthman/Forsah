@@ -5,7 +5,7 @@ const clsProposal = require('../model/clsProposal.model');
 
         try {
             
-            console.log('ProjectId : ', projectId);
+            console.log('ProjectId -> : ', projectId);
             
 
             const proposals = await clsProposal.getProposals(JSON.parse(projectId));
@@ -34,7 +34,7 @@ const clsProposal = require('../model/clsProposal.model');
             console.log('ProjectId : ', projectId);
             
 
-            const result = await clsProposal.checkProposal(JSON.parse(projectId), JSON.parse(freelancerId));
+            const result = await clsProposal.checkProposal(projectId, freelancerId);
 
             if (result) {
 

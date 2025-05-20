@@ -14,6 +14,7 @@ import {
   Flag,
   Briefcase
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * Component to display a list of proposals for a project with award and chat options
@@ -31,12 +32,14 @@ const ProposalsList = ({
   proposals = [], 
   projectId,
   isClientView = false,
-  onChatClick,
-  onAwardClick,
-  onProposalUpdate,
+  // onChatClick,
+  // onAwardClick,
+  // onProposalUpdate,
   apiUrl
 }) => {
   const [expandedProposal, setExpandedProposal] = useState(null);
+  const userData = JSON.parse(localStorage.getItem('userData'));
+  const navigate = useNavigate();
 
   // Toggle proposal details expansion
   const toggleExpand = (proposalId) => {
@@ -48,56 +51,83 @@ const ProposalsList = ({
   };
 
   // Handle chat button click
-  const handleChatClick = (proposal) => {
-    if (onChatClick) {
-      onChatClick(proposal);
+  // const handleChatClick = (proposal) => {
+  //   if (onChatClick) {
+  //     onChatClick(proposal);
+  //   }
+  // };
+
+  const handleChatClick = async (proposal) => {
+    console.log('Chat with freelancer', proposal.userId);
+
+    const response = await axios.post(`/api/contact?senderId=${userData.userId[0]}&recevierId=${proposal.userId}`);
+
+    if(response.data){
+
+      navigate('/messages')
     }
+
+    alert(`Chat functionality would connect you with ${proposal.freelancer.name}`);
+    // In a real application, this would open a chat with the freelancer
+  };
+
+  const handleAwardClick = async (proposal) => {
+    console.log('Chat with freelancer', proposal.userId);
+
+    // const response = await axios.post(`/api/contact?senderId=${userData.userId[0]}&recevierId=${proposal.userId}`);
+
+    // if(response.data){
+
+      navigate('/payment');
+    // }
+
+    alert(`Chat functionality would connect you with ${proposal.freelancer.name}`);
+    // In a real application, this would open a chat with the freelancer
   };
 
   // Handle award button click
-  const handleAwardClick = async (proposal) => {
-    if (onAwardClick) {
-      onAwardClick(proposal);
-    }
-  };
+  // const handleAwardClick = async (proposal) => {
+  //   if (onAwardClick) {
+  //     onAwardClick(proposal);
+  //   }
+  // };
 
   // Log to debug
   console.log("Rendering proposals list with:", proposals);
   
-
-  // const [useProposals, setUseProposals] = useState(null);
+  const [useProposals, setUseProposals] = useState([]);
 
   // TEMPORARY: If there are no proposals, use demo data directly in the component
-  const useProposals = proposals.length > 0 ? proposals : [
-    {
-      proposalId: 1001,
-      projectId: projectId || 123,
-      userId: 789,
-      proposalAmount: 350,
-      proposalDeadline: "2023-06-15",
-      proposalDescription: "Hello! I'm very experienced with Excel formulas and VBA. I've worked on many financial spreadsheets that deal with fiscal year calculations. I can fix your issue with the date formulas and ensure they account for the fiscal year differences correctly.\n\nI've attached some examples of similar work I've done in the past. I would approach this by first analyzing your current formulas, understanding the fiscal year requirements, and then implementing a solution that's both accurate and easy to maintain.\n\nLooking forward to working with you!",
-      createdAt: new Date().toISOString(),
-      proposalStateId: 1,
-      firstName: "John",
-      lastName: "Smith",
-      imageUrl: "https://randomuser.me/api/portraits/men/1.jpg",
-      city: "New York, USA",
-      countryName: "United States",
-      rating: 4.8,
-      totalReviews: 57,
-      totalEarned: 12500,
-      projectsCompleted: 23,
-      skills: ["Excel", "VBA", "Python", "Financial Analysis", "Data Visualization", "SQL", "Power BI"]
-      }
-  ];
+  // const useProposals = proposals.length > 0 ? proposals : [
+  //   {
+  //     proposalId: 1001,
+  //     projectId: projectId || 123,
+  //     userId: 789,
+  //     proposalAmount: 350,
+  //     proposalDeadline: "2023-06-15",
+  //     proposalDescription: "Hello! I'm very experienced with Excel formulas and VBA. I've worked on many financial spreadsheets that deal with fiscal year calculations. I can fix your issue with the date formulas and ensure they account for the fiscal year differences correctly.\n\nI've attached some examples of similar work I've done in the past. I would approach this by first analyzing your current formulas, understanding the fiscal year requirements, and then implementing a solution that's both accurate and easy to maintain.\n\nLooking forward to working with you!",
+  //     createdAt: new Date().toISOString(),
+  //     proposalStateId: 1,
+  //     firstName: "John",
+  //     lastName: "Smith",
+  //     imageUrl: "https://randomuser.me/api/portraits/men/1.jpg",
+  //     city: "New York, USA",
+  //     countryName: "United States",
+  //     rating: 4.8,
+  //     totalReviews: 57,
+  //     totalEarned: 12500,
+  //     projectsCompleted: 23,
+  //     skills: ["Excel", "VBA", "Python", "Financial Analysis", "Data Visualization", "SQL", "Power BI"]
+  //     }
+  // ];
   
   useEffect(() => {
     const fetchProposals = async () => {
 
       try {
 
-        // const response = await axios.get(`${apiUrl}/${projectId}`);
-        // setUseProposals(response.data.proposals || []);
+        const response = await axios.get(`${apiUrl}/${projectId}`);
+        setUseProposals(response.data?.proposals || []);
         
       } catch (err) {
         console.error('Error fetching proposals:', err);
@@ -139,18 +169,18 @@ const ProposalsList = ({
                       {proposal.imageUrl ? (
                         <img 
                           src={proposal.imageUrl} 
-                          alt={proposal.firstName + " " + proposal.lastName}
+                          alt={ proposal.username}
                           className="h-14 w-14 rounded-full object-cover border-2 border-blue-100"
                         />
                       ) : (
                         <div className="h-14 w-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-lg">
-                          {proposal.firstName.charAt(0)}
+                          {proposal?.username?.charAt(0)}
                         </div>
                       )}
                     </div>
                     <div>
                       <div className="flex items-center">
-                        <h3 className="font-semibold text-gray-900">{proposal.firstName}</h3>
+                        <h3 className="font-semibold text-gray-900">{proposal.firstName != null || proposal.lastName != null ? (proposal.firstName + " " + proposal.lastName) : ('@' + proposal.username)}</h3>
                         <div className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">ID #{proposal.proposalId}</div>
                       </div>
                       <div className="flex items-center text-sm text-gray-500 mt-0.5">
@@ -248,14 +278,14 @@ const ProposalsList = ({
                           />
                         ) : (
                           <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
-                            {proposal.firstName.charAt(0)}
+                            {proposal?.username?.charAt(0)}
                           </div>
                         )}
                       </div>
                       
                       <div className="flex-1">
                         <div className="flex flex-wrap justify-between items-center mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{proposal.firstName + " " + proposal.lastName}</h3>
+                          <h3 className="text-lg font-semibold text-gray-900">{proposal.firstName != null || proposal.lastName != null ? (proposal.firstName + " " + proposal.lastName) : ('@' + proposal.username)}</h3>
                           <div className="flex items-center bg-blue-50 px-2 py-1 rounded text-sm">
                             <Star className="h-4 w-4 text-yellow-500 mr-1" fill="currentColor" />
                             <span className="font-medium">{proposal.rating}/5.0</span>
@@ -270,7 +300,7 @@ const ProposalsList = ({
                             <div>
                               <div className="text-gray-500 font-medium">Location</div>
                               <div className="text-gray-800">
-                                {proposal.city || 'Not specified'}
+                                { proposal.country || proposal.city || 'Not specified'}
                                 {proposal.country && proposal.city && 
                                   `${proposal.city}, ${proposal.country}`}
                               </div>
@@ -375,16 +405,16 @@ const ProposalsList = ({
                   )}
                   
                   {/* Action Buttons */}
-                  <div className="mt-6 flex flex-wrap justify-end gap-3">
+                  <div className="mt-6 flex flex-wrap justify-end gap-3 ">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleChatClick(proposal);
                       }}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                      className="hover:scale-110 hover:cursor-pointer transition-all duration-300 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
                     >
-                      <MessageCircle className="h-4 w-4 mr-2 text-blue-600" />
+                      <MessageCircle className="h-4 w-4 mr-2 text-blue-600 " />
                       Chat
                     </button>
                     

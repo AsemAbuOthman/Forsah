@@ -19,7 +19,7 @@ const SimpleProposalsList = ({
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const userData = JSON.parse(localStorage.getItem('userData'));
 
 /*
   SELECT 
@@ -99,8 +99,11 @@ const SimpleProposalsList = ({
   }, [projectId]);
 
   // Handle chat with a freelancer
-  const handleChatClick = (proposal) => {
-    console.log('Chat with freelancer', proposal.freelancerId);
+  const handleChatClick = async (proposal) => {
+    console.log('Chat with freelancer', proposal);
+
+    const response = await axios.post(`/api/contact?senderId=${userData.userId[0]}&recevierId=${proposal.userId}`);
+
     alert(`Chat functionality would connect you with ${proposal.freelancer.name}`);
     // In a real application, this would open a chat with the freelancer
   };

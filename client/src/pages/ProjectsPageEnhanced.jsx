@@ -127,7 +127,7 @@ const ProjectCard = ({ project }) => {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 text-xs">Range:</span>
                 <span className={`text-xl font-bold ${colors.primary.split(' ')[1]}`}>
-                  {project.symbol} {formatcode(project.minBudget)} - {formatcode(project.maxBudget)} <span className="text-xs text-gray-500 ml-1">{project.code}</span>
+                  {project.symbol != '?' ? project.symbol : project.code} {formatcode(project.minBudget)} - {formatcode(project.maxBudget)} <span className="text-xs text-gray-500 ml-1">{project.code}</span>
                 </span>
               </div>
             </div>

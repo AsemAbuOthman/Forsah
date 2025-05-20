@@ -11,41 +11,70 @@ class clsConfig{
         password: '00000000',
         options: {
             encrypt: false,
-            trustServerCertificate: true
-        }
+            trustServerCertificate: true,
+            enableArithAbort: true
+        },
+        pool: {
+            max: 10,
+            min: 0,
+            idleTimeoutMillis: 30000
+        },
+        
+        connectionTimeout: 30000,
+
+        requestTimeout: 30000
     }
 
-    static getConnection = async ()=> {
+    static getConnection = async () => {
+
         if (!global.pool) {
             try {
-                global.pool = await sql.connect(this.connString);
-                console.log('Database connected');
+                global.pool = await new sql.ConnectionPool(this.connString).connect();
+                console.log('Database connection pool created');
+
+                global.pool.on('error', err => {
+                    console.error('SQL Pool Error:', err);
+                    global.pool = null;
+                });
+
             } catch (err) {
                 console.error('Database connection failed:', err);
+                global.pool = null;
                 throw err;
             }
-        }else{
-            console.log('Database already connected');
         }
         return global.pool;
     }
     
-    static closeConnection = async ()=> {
+    static closeConnection = async () => {
+
+        let isClosed = false;
+
         if (global.pool) {
             try {
-                global.pool.close();
-                console.log('Database closed');
+                if(await global.pool.close()){
+
+                    global.pool = null;
+                    isClosed = true;
+                    console.log('Database connection pool closed');
+                }
             } catch (err) {
-                console.error('Database connection failed:', err);
+                console.error('Error closing database connection:', err);
                 throw err;
             }
-        }else{
-            console.log('Database already closed');
+        } else {
+            console.log('No active database connection to close');
         }
-    
-        return global.pool;
+
+        return isClosed;
     }
 
 }
+
+process.on('SIGINT', async () => {
+    await clsConfig.closeConnection();
+    process.exit(0);
+})
+    
 
 module.exports = clsConfig;

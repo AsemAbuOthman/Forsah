@@ -232,7 +232,7 @@ export function EditPortfolioModal({ portfolio, isOpen, onClose }: {
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto transition-all hover:scale-125 duration-300 scale-100">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Portfolio Project' : 'Add Portfolio Project'}</DialogTitle>
           <Button 

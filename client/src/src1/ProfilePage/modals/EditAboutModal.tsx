@@ -25,12 +25,15 @@ export function EditAboutModal({ user, isOpen, onClose }: EditAboutModalProps) {
 
 
   const updateAboutMutation = useMutation({
-    mutationFn: (aboutText: string) => {
-
-      setUserData(updateUserProfile(user.userId, { profileDescription: aboutText }));
-      return userData;
+    mutationFn: async (aboutText: string) => {
+      const updatedUser = await updateUserProfile(user.userId, {
+        ...user,
+        profileDescription: aboutText,
+      });
+      return updatedUser;
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      setUserData(updatedUser);
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
       toast({
         title: "About section updated",
@@ -55,7 +58,7 @@ export function EditAboutModal({ user, isOpen, onClose }: EditAboutModalProps) {
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[550px] transition-all hover:scale-125 duration-300 scale-100 ">
         <DialogHeader>
           <DialogTitle>Edit About Me</DialogTitle>
           <Button 

@@ -20,10 +20,14 @@ import ProjectsPageEnhanced from '../pages/ProjectsPageEnhanced';
 import DashboardPage from '../pages/DashboardPage';
 import FavoriteFreelancersGrid from '../pages/FavoriteFreelancersGrid';
 import FreelancersDirectoryPage from '../pages/FreelancersDirectoryPage';
-import MessagingComponent from '../components/messaging/MessagingComponent';
+import MessagingPage from '../pages/MessagingPage';
 import PostProjectPage from '../pages/PostProjectPage';
 import DashboardHeader from "../components/Dashborad/DashboardHeader";
 import SimpleProposalDemo from '../pages/SimpleProposalDemo';
+import LogOut from '../components/LogOut';
+import SocketProvider from '../components/messaging/WebSocketProvider';
+import PaymentPage from '../components/payment/PaymentPage';
+
 
 const queryClient = new QueryClient();
 
@@ -56,6 +60,7 @@ export default function Router() {
                     <Link to="/post_project"></Link>
                     <Link to="/projects"></Link>
                     <Link to="/proposals"></Link>
+                    <Link to="/payment"></Link>
                 </nav>
 
                 <Routes>
@@ -63,12 +68,34 @@ export default function Router() {
                     <Route path='/' element={<Home />} />
                     <Route path='/signup' element={<SignUp />} />
                     <Route path='/login' element={<LogInForm />} />
+                    <Route path='/logout' element={<LogOut />} />
+
+                    <Route path='/payment' element={
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
+                                <PaymentPage />
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>
+                        } />
 
                     <Route path='/messages' element={
                         <ProtectedDashboardRoute>
                             <HomeDashboardHeader>
                                 <DashboardHeader/>
-                                    <MessagingComponent />
+                                <SocketProvider>
+                                    <MessagingPage />
+                                </SocketProvider>
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>
+                    } />
+
+                    <Route path='/messages/:id' element={
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
+                                <DashboardHeader/>
+                                <SocketProvider>
+                                    <MessagingPage />
+                                </SocketProvider>
                             </HomeDashboardHeader>
                         </ProtectedDashboardRoute>
                     } />
