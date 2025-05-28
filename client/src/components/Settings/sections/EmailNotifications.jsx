@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Save } from 'lucide-react';
 
 const EmailNotifications = () => {
-  const [email, setEmail] = useState('johndoe@example.com');
   const [notifications, setNotifications] = useState({
     projectMessages: true,
     projectUpdates: true,
@@ -11,13 +10,9 @@ const EmailNotifications = () => {
     weeklyNewsletter: false,
     marketingEmails: false
   });
-  const [isEmailEditing, setIsEmailEditing] = useState(false);
   const [isChanged, setIsChanged] = useState(false);
 
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    setIsEmailEditing(true);
-  };
+
 
   const handleNotificationChange = (e) => {
     const { name, checked } = e.target;
@@ -28,12 +23,6 @@ const EmailNotifications = () => {
     setIsChanged(true);
   };
 
-  const saveEmailChanges = () => {
-    // Here you would typically update the email via API
-    console.log('Saving new email:', email);
-    setIsEmailEditing(false);
-    alert('Email updated successfully!');
-  };
 
   const saveNotificationChanges = () => {
     // Here you would typically update notification preferences via API
@@ -44,36 +33,7 @@ const EmailNotifications = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">Email Address</h2>
-          {isEmailEditing && (
-            <button 
-              onClick={saveEmailChanges}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors"
-            >
-              <Save size={16} />
-              <span>Save Email</span>
-            </button>
-          )}
-        </div>
-        
-        <div className="bg-white p-4 rounded-md border border-gray-200">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Primary Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={handleEmailChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <p className="text-xs text-gray-500 mt-2">
-            This email will be used for all communications and account-related notifications.
-          </p>
-        </div>
-      </div>
+
       
       <div>
         <div className="flex justify-between items-center mb-6">

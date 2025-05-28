@@ -227,7 +227,7 @@ const ProposalCard = ({ proposal, onAward, onChat }) => {
   const gradient = getGradient(proposal.freelancerId);
   
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4 hover:shadow-lg transition-shadow">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4 hover:shadow-lg transition-shadow ">
       <div className="p-4">
         <div className="flex items-center mb-3">
           <div className="relative">
@@ -374,7 +374,7 @@ const DashboardPage = () => {
   const unreadCount = announcements.filter(a => !a.isRead).length;
   
   return (
-    <div className="bg-gray-50 min-h-screen py-6">
+    <div className="bg-gray-50 min-h-screen py-6 bg-gray-200">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Dashboard Header */}
         <div className="mb-8">

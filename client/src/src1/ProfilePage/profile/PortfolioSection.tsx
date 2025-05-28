@@ -7,13 +7,15 @@ import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { Portfolio } from "../../lib/types";
+import { DeleteConfirmationModal } from "../ui/delete-confirmation-modal";
 
 interface PortfolioSectionProps {
   portfolios: Portfolio[];
   onAddPortfolio: () => void;
   onEditPortfolio: (portfolio: Portfolio) => void;
   onViewDetails: (portfolio: Portfolio) => void;
-  isEditable?: boolean; // <-- Added
+  isEditable?: boolean;
+  refetchPortfolios?: () => Promise<void>; // Add refetch capability
 }
 
 export default function PortfolioSection({
@@ -21,21 +23,44 @@ export default function PortfolioSection({
   onAddPortfolio,
   onEditPortfolio,
   onViewDetails,
-  isEditable = false, // <-- Default to false
+  isEditable = false,
+  refetchPortfolios,
 }: PortfolioSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [portfolioToDelete, setPortfolioToDelete] = useState<Portfolio | null>(null);
 
   const deleteMutation = useMutation({
     mutationFn: deletePortfolio,
-    onSuccess: (_, portfolioId) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    // Optimistic update implementation
+    onMutate: async (portfolioId) => {
+      // Cancel any outgoing refetches to avoid overwriting
+      await queryClient.cancelQueries(['portfolios']);
+      
+      // Snapshot the previous value
+      const previousPortfolios = queryClient.getQueryData<Portfolio[]>(['portfolios']);
+      
+      // Optimistically remove the portfolio
+      queryClient.setQueryData(['portfolios'], (old: Portfolio[] = []) => 
+        old.filter(p => p.portfolioId !== portfolioId)
+      );
+      
+      return { previousPortfolios };
+    },
+    onSuccess: async () => {
+      // Optional: refetch to ensure server-state matches client-state
+      if (refetchPortfolios) {
+        await refetchPortfolios();
+      }
       toast({
         title: "Portfolio deleted",
         description: "Your portfolio project has been deleted successfully.",
       });
+      setPortfolioToDelete(null);
     },
-    onError: (error) => {
+    onError: (error, portfolioId, context) => {
+      // Rollback on error
+      queryClient.setQueryData(['portfolios'], context?.previousPortfolios);
       toast({
         title: "Failed to delete portfolio",
         description: "There was an error deleting your portfolio project.",
@@ -43,13 +68,25 @@ export default function PortfolioSection({
       });
       console.error("Error deleting portfolio:", error);
     },
+    onSettled: () => {
+      // Always refetch after error or success to ensure data is in sync
+      queryClient.invalidateQueries(['portfolios']);
+    },
   });
 
-  const handleDelete = (portfolio: Portfolio, e: React.MouseEvent) => {
+  const handleDeleteClick = (portfolio: Portfolio, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("Are you sure you want to delete this portfolio project?")) {
-      deleteMutation.mutate(portfolio.portfolioId);
+    setPortfolioToDelete(portfolio);
+  };
+
+  const handleConfirmDelete = () => {
+    if (portfolioToDelete) {
+      deleteMutation.mutate(portfolioToDelete.portfolioId);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setPortfolioToDelete(null);
   };
 
   const handleEdit = (portfolio: Portfolio, e: React.MouseEvent) => {
@@ -58,11 +95,23 @@ export default function PortfolioSection({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div className="bg-white rounded-lg shadow-md p-6 mb-6 ">
+      <DeleteConfirmationModal
+        isOpen={!!portfolioToDelete}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        itemName={portfolioToDelete ? `"${portfolioToDelete.sampleProjectTitle}"` : "this project"}
+        isLoading={deleteMutation.isPending}
+      />
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-800">Portfolio</h3>
         {isEditable && (
-          <Button className="text-white gradient-blue" onClick={onAddPortfolio}>
+          <Button 
+            className="text-white gradient-blue" 
+            onClick={onAddPortfolio}
+            disabled={deleteMutation.isPending}
+          >
             <PlusIcon className="h-4 w-4 mr-1" />
             Add Project
           </Button>
@@ -73,24 +122,31 @@ export default function PortfolioSection({
         <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
           <div className="text-gray-500">No portfolio projects yet</div>
           {isEditable && (
-            <Button className="mt-4 text-white gradient-blue" onClick={onAddPortfolio}>
+            <Button 
+              className="mt-4 text-white gradient-blue" 
+              onClick={onAddPortfolio}
+              disabled={deleteMutation.isPending}
+            >
               <PlusIcon className="h-4 w-4 mr-1" />
               Add Your First Project
             </Button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-8 ">
           {portfolios.map((portfolio) => (
             <div
               key={portfolio.portfolioId}
-              className="card-shadow rounded-lg overflow-hidden card-hover transition-all duration-300 cursor-pointer"
+              className={`card-shadow rounded-lg overflow-hidden card-hover transition-all duration-300 cursor-pointer ${
+                deleteMutation.isPending && portfolioToDelete?.portfolioId === portfolio.portfolioId 
+                  ? 'opacity-50' : ''
+              }`}
               onClick={() => onViewDetails(portfolio)}
             >
               <div className="relative">
                 <ImageCarousel
                   images={portfolio.images || []}
-                  className="h-40"
+                  className="h-40 md:h-60"
                   alt={portfolio.sampleProjectTitle}
                 />
 
@@ -100,13 +156,15 @@ export default function PortfolioSection({
                       size="icon"
                       className="bg-white bg-opacity-70 text-gray-700 hover:bg-opacity-100 transition-all h-6 w-6"
                       onClick={(e) => handleEdit(portfolio, e)}
+                      disabled={deleteMutation.isPending}
                     >
                       <PencilIcon className="h-3 w-3" />
                     </Button>
                     <Button
                       size="icon"
                       className="bg-white bg-opacity-70 text-red-500 hover:bg-opacity-100 transition-all h-6 w-6"
-                      onClick={(e) => handleDelete(portfolio, e)}
+                      onClick={(e) => handleDeleteClick(portfolio, e)}
+                      disabled={deleteMutation.isPending}
                     >
                       <Trash2Icon className="h-3 w-3" />
                     </Button>
@@ -151,6 +209,7 @@ export default function PortfolioSection({
                       e.stopPropagation();
                       onViewDetails(portfolio);
                     }}
+                    disabled={deleteMutation.isPending}
                   >
                     Details
                   </Button>

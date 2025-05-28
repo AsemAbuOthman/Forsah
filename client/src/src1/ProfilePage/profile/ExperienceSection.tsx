@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Experience } from "../../lib/types";
 import { Button } from "../ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -5,33 +6,51 @@ import { deleteExperience } from "../../lib/api";
 import { useToast } from "../../hooks/use-toast";
 import { format, formatDistance } from "date-fns";
 import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { DeleteConfirmationModal } from "../ui/delete-confirmation-modal";
 
 interface ExperienceSectionProps {
   experiences: Experience[];
   isEditable?: boolean;
   onAddExperience?: () => void;
   onEditExperience?: (experience: Experience) => void;
+  refetchExperiences?: () => Promise<void>;
 }
 
 export default function ExperienceSection({ 
   experiences, 
   isEditable = false, 
   onAddExperience, 
-  onEditExperience 
+  onEditExperience,
+  refetchExperiences
 }: ExperienceSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [experienceToDelete, setExperienceToDelete] = useState<Experience | null>(null);
   
   const deleteMutation = useMutation({
     mutationFn: deleteExperience,
-    onSuccess: (_, experienceId) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    // Optimistic update implementation
+    onMutate: async (experienceId) => {
+      await queryClient.cancelQueries(['experiences']);
+      
+      const previousExperiences = queryClient.getQueryData<Experience[]>(['experiences']);
+      
+      queryClient.setQueryData(['experiences'], (old: Experience[] = []) => 
+        old.filter(e => e.experienceId !== experienceId)
+      );
+      
+      return { previousExperiences };
+    },
+    onSuccess: async () => {
+      await refetchExperiences?.();
       toast({
         title: "Experience deleted",
         description: "Your work experience has been deleted successfully.",
       });
+      setExperienceToDelete(null);
     },
-    onError: (error) => {
+    onError: (error, experienceId, context) => {
+      queryClient.setQueryData(['experiences'], context?.previousExperiences);
       toast({
         title: "Failed to delete experience",
         description: "There was an error deleting your work experience.",
@@ -39,12 +58,24 @@ export default function ExperienceSection({
       });
       console.error("Error deleting experience:", error);
     },
+    onSettled: () => {
+      queryClient.invalidateQueries(['experiences']);
+    },
   });
 
-  const handleDelete = (experienceId: number) => {
-    if (confirm("Are you sure you want to delete this work experience?")) {
-      deleteMutation.mutate(experienceId);
+  const handleDeleteClick = (experience: Experience, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExperienceToDelete(experience);
+  };
+
+  const handleConfirmDelete = () => {
+    if (experienceToDelete) {
+      deleteMutation.mutate(experienceToDelete.experienceId);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setExperienceToDelete(null);
   };
 
   const formatExperienceDuration = (startDate: string, endDate?: string) => {
@@ -67,12 +98,22 @@ export default function ExperienceSection({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={!!experienceToDelete}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        itemName={experienceToDelete ? `"${experienceToDelete.experienceTitle}" at ${experienceToDelete.experienceCompanyName}` : "this work experience"}
+        isLoading={deleteMutation.isPending}
+      />
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-800">Work Experience</h3>
         {isEditable && onAddExperience && (
           <Button 
             className="text-white gradient-orange"
             onClick={onAddExperience}
+            disabled={deleteMutation.isPending}
           >
             <PlusIcon className="h-4 w-4 mr-1" />
             Add Experience
@@ -87,6 +128,7 @@ export default function ExperienceSection({
             <Button 
               className="mt-4 text-white gradient-orange"
               onClick={onAddExperience}
+              disabled={deleteMutation.isPending}
             >
               <PlusIcon className="h-4 w-4 mr-1" />
               Add Your First Experience
@@ -96,7 +138,13 @@ export default function ExperienceSection({
       ) : (
         <div className="relative pl-6 before:content-[''] before:absolute before:left-1 before:top-2 before:bottom-6 before:w-0.5 before:bg-gray-200">
           {sortedExperiences.map((experience, index) => (
-            <div key={experience.experienceId} className="mb-6 relative">
+            <div 
+              key={experience.experienceId} 
+              className={`mb-6 relative ${
+                deleteMutation.isPending && experienceToDelete?.experienceId === experience.experienceId 
+                  ? 'opacity-50' : ''
+              }`}
+            >
               <div className="absolute w-2.5 h-2.5 rounded-full bg-blue-500 -left-[19px] top-1.5"></div>
               <div className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-all">
                 <div className="flex justify-between">
@@ -114,7 +162,11 @@ export default function ExperienceSection({
                           variant="ghost"
                           size="icon"
                           className="text-gray-400 hover:text-gray-600 h-6 w-6"
-                          onClick={() => onEditExperience?.(experience)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditExperience?.(experience);
+                          }}
+                          disabled={deleteMutation.isPending}
                         >
                           <PencilIcon className="h-3 w-3" />
                         </Button>
@@ -122,7 +174,8 @@ export default function ExperienceSection({
                           variant="ghost"
                           size="icon"
                           className="text-red-400 hover:text-red-600 h-6 w-6"
-                          onClick={() => handleDelete(experience.experienceId)}
+                          onClick={(e) => handleDeleteClick(experience, e)}
+                          disabled={deleteMutation.isPending}
                         >
                           <Trash2Icon className="h-3 w-3" />
                         </Button>

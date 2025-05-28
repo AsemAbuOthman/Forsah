@@ -1,7 +1,7 @@
-import { useCallback } from "react";
+import { useCallback, useState} from "react";
 import { Camera, PencilIcon } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateUserProfile } from "../../lib/api";
+import {  updateUserProfileImage } from "../../lib/api";
 import { Button } from "../ui/button";
 import { useToast } from "../../hooks/use-toast";
 import { User } from "../../lib/types";
@@ -25,34 +25,40 @@ function extractFirebasePath(downloadUrl: string): string | null {
 export default function ProfileHeader({ user, onEdit, isEditable = false }: ProfileHeaderProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
 
   const mutation = useMutation({
     mutationFn: async (file: File) => {
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExtension}`;
+      setUploading(true); 
+      try {
+        const fileExtension = file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExtension}`;
+        const newImageRef = ref(storage, `profile-pictures/${fileName}`);
+    
 
-      const storageRef = ref(storage, `profile-pictures/${fileName}`);
-      
-      await uploadBytes(storageRef, file);
-      
-      const downloadUrl = await getDownloadURL(storageRef);
-      const firebasePath = extractFirebasePath(user.imageUrl);
-
-      if (downloadUrl) {
-        const storageRef = ref(storage, `profile-pictures/${firebasePath}`);
-        await deleteObject(storageRef);
-        console.log("Deleted from Firebase:", firebasePath);
-      } else {
-        console.error("Invalid image URL");
+        await uploadBytes(newImageRef, file);
+        const downloadUrl = await getDownloadURL(newImageRef);
+    
+        if (user.imageUrl) {
+          try {
+            const firebasePath = extractFirebasePath(user.imageUrl);
+            const oldImageRef = ref(storage, `${firebasePath}`);
+            await deleteObject(oldImageRef);
+            console.log("Deleted old image from Firebase:", firebasePath);
+          } catch (error) {
+            console.warn("Failed to delete old image:", error.message);
+          }
+        }
+    
+        await updateUserProfileImage(user.userId[0], { ...user, imageUrl: downloadUrl });
+        return downloadUrl;
+      } finally {
+        setUploading(false); // stop loading
       }
-    
-      await updateUserProfile(user.userId, { ...user, imageUrl: downloadUrl });
-    
-      return downloadUrl;
     },
     
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/image/${user.userId[0]}`] });
       toast({
         title: "Profile picture updated",
         description: "Your profile picture has been updated successfully.",
@@ -93,15 +99,22 @@ export default function ProfileHeader({ user, onEdit, isEditable = false }: Prof
               alt="Profile"
               className="w-24 h-24 rounded-full object-cover border-4 border-white"
             />
-            {isEditable && (
-              <button
-                onClick={handleEditProfilePicture}
-                className="absolute bottom-0 right-0 bg-gray-100 p-1 rounded-full border border-gray-300 text-gray-600"
-                aria-label="Edit profile picture"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-            )}
+              {/* Loading overlay */}
+              {uploading && (
+                <div className="absolute inset-0 bg-white bg-opacity-50 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+                </div>
+              )}
+              {/* Edit Button */}
+              {isEditable && !uploading && (
+                <button
+                  onClick={handleEditProfilePicture}
+                  className="absolute bottom-0 right-0 bg-gray-100 p-1 rounded-full border border-gray-300 text-gray-600"
+                  aria-label="Edit profile picture"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+              )}
           </div>
         </div>
 

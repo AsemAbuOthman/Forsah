@@ -2,16 +2,13 @@ import React, { useContext, useEffect, useState } from 'react';
 import ProjectProposalSystem from '../components/proposals/ProjectProposalSystem';
 import { useLocation } from 'react-router-dom';
 import { UserContext } from '../store/UserProvider';
-/**
- * Demo page that showcases the project proposal system
- * with toggle between client and freelancer views
- */
+
 const SimpleProposalDemo = () => {
   // Toggle between client view and freelancer view for demonstration
   const [isClientView, setIsClientView] = useState(false);
   const [userData, setUserData] = useContext(UserContext);
   
-  // Sample freelancer ID - in a real app this would come from authentication
+
   // const sampleFreelancerId = '12345';
   
   // Sample project data for demo
@@ -41,8 +38,8 @@ const SimpleProposalDemo = () => {
 
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
+    <div className="container mx-auto px-4 py-8 bg-gray-200">
+      <div className="mb-6 ">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">{sampleProject.projectTitle}</h1>
         
         {/* View Toggle */}
@@ -87,54 +84,7 @@ const SimpleProposalDemo = () => {
         freelancerId={isClientView ? -1 : userData.userId[0]}
         isClientView={isClientView}
       />
-      
-      {/* Documentation */}
-      <div className="mt-16 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <h2 className="text-lg font-bold text-yellow-800 mb-2">
-          💡 About This Component
-        </h2>
-        <p className="text-yellow-700 mb-3">
-          This demo uses sample data to showcase how the proposal system works. In a real application:
-        </p>
-        <ul className="list-disc ml-6 space-y-2 text-yellow-700">
-          <li>Project data would be fetched from your database</li>
-          <li>The freelancer ID would come from your authentication system</li>
-          <li>Proposals would be stored and retrieved from your database</li>
-          <li>Form submissions would be validated on the server</li>
-          <li>The chat functionality would connect to your real messaging system</li>
-          <li>Awarded projects would update their status in your database</li>
-        </ul>
-        
-        <div className="mt-4 pt-4 border-t border-yellow-200">
-          <h3 className="font-medium text-yellow-800 mb-2">Component Features:</h3>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-yellow-700">
-            <li className="flex items-start">
-              <span className="text-green-500 mr-2">✓</span>
-              Proposal submission form with validation
-            </li>
-            <li className="flex items-start">
-              <span className="text-green-500 mr-2">✓</span>
-              Proposal listing with freelancer details
-            </li>
-            <li className="flex items-start">
-              <span className="text-green-500 mr-2">✓</span>
-              Different views for clients and freelancers
-            </li>
-            <li className="flex items-start">
-              <span className="text-green-500 mr-2">✓</span>
-              Project awarding functionality
-            </li>
-            <li className="flex items-start">
-              <span className="text-green-500 mr-2">✓</span>
-              Chat initiation with freelancers
-            </li>
-            <li className="flex items-start">
-              <span className="text-green-500 mr-2">✓</span>
-              Responsive design for all screen sizes
-            </li>
-          </ul>
-        </div>
-      </div>
+
     </div>
   );
 };

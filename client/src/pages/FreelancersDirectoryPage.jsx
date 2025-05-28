@@ -3,308 +3,6 @@ import { Filter, Search, Heart, Shield, Award, X, Plus, ChevronDown, DollarSign,
 import { Link } from 'wouter';
 import axios from 'axios';
 // // Sample freelancers data (will be replaced with API call later)
-// const sampleFreelancers = [
-//   {
-//     id: 1,
-//     avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
-//     fullName: 'Sophia Martinez',
-//     username: 'sophia_design',
-//     title: 'Senior UI/UX Designer',
-//     hourlyRate: 45,
-//     rating: 4.9,
-//     reviews: 127,
-//     completedProjects: 89,
-//     country: 'United States',
-//     city: 'San Francisco',
-//     languages: ['English', 'Spanish'],
-//     lastActive: '2025-05-02T14:30:00',
-//     specialties: ['UI/UX Design', 'Wireframing', 'Prototyping', 'User Research'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: true,
-//     bio: 'Award-winning UI/UX designer with 8+ years of experience creating intuitive digital experiences for global brands.'
-//   },
-//   {
-//     id: 2,
-//     avatar: 'https://randomuser.me/api/portraits/men/43.jpg',
-//     fullName: 'James Wilson',
-//     username: 'jwilson_dev',
-//     title: 'Full Stack Developer',
-//     hourlyRate: 55,
-//     rating: 4.8,
-//     reviews: 94,
-//     completedProjects: 73,
-//     country: 'Canada',
-//     city: 'Toronto',
-//     languages: ['English', 'French'],
-//     lastActive: '2025-05-01T10:15:00',
-//     specialties: ['React', 'Node.js', 'MongoDB', 'Express'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: false,
-//     bio: 'Full stack developer specializing in MERN stack with a focus on scalable web applications and API development.'
-//   },
-//   {
-//     id: 3,
-//     avatar: 'https://randomuser.me/api/portraits/women/33.jpg',
-//     fullName: 'Emma Thompson',
-//     username: 'emma_writer',
-//     title: 'Content Strategist & Writer',
-//     hourlyRate: 40,
-//     rating: 4.7,
-//     reviews: 65,
-//     completedProjects: 58,
-//     country: 'United Kingdom',
-//     city: 'London',
-//     languages: ['English'],
-//     lastActive: '2025-05-03T09:45:00',
-//     specialties: ['Content Writing', 'SEO', 'Email Marketing', 'Blog Posts'],
-//     verified: true,
-//     topRated: false,
-//     isFavorite: true,
-//     bio: 'Content strategist and writer helping brands tell their stories and connect with audiences through compelling copy.'
-//   },
-//   {
-//     id: 4,
-//     avatar: 'https://randomuser.me/api/portraits/men/52.jpg',
-//     fullName: 'Michael Chen',
-//     username: 'mike_devops',
-//     title: 'DevOps Engineer',
-//     hourlyRate: 60,
-//     rating: 4.6,
-//     reviews: 48,
-//     completedProjects: 42,
-//     country: 'Singapore',
-//     city: 'Singapore',
-//     languages: ['English', 'Mandarin'],
-//     lastActive: '2025-05-01T16:20:00',
-//     specialties: ['DevOps', 'AWS', 'Docker', 'Kubernetes'],
-//     verified: false,
-//     topRated: false,
-//     isFavorite: false,
-//     bio: 'DevOps engineer with expertise in cloud infrastructure, CI/CD pipelines, and containerization technologies.'
-//   },
-//   {
-//     id: 5,
-//     avatar: 'https://randomuser.me/api/portraits/women/25.jpg',
-//     fullName: 'Olivia Garcia',
-//     username: 'olivia_data',
-//     title: 'Data Scientist',
-//     hourlyRate: 65,
-//     rating: 4.9,
-//     reviews: 39,
-//     completedProjects: 31,
-//     country: 'Spain',
-//     city: 'Barcelona',
-//     languages: ['English', 'Spanish', 'Catalan'],
-//     lastActive: '2025-05-02T12:10:00',
-//     specialties: ['Data Science', 'Machine Learning', 'Python', 'Statistical Analysis'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: true,
-//     bio: 'Data scientist passionate about using ML and AI to solve complex business problems and extract actionable insights.'
-//   },
-//   {
-//     id: 6,
-//     avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-//     fullName: 'Ahmed Khan',
-//     username: 'ahmed_mobile',
-//     title: 'Mobile Developer',
-//     hourlyRate: 50,
-//     rating: 4.7,
-//     reviews: 52,
-//     completedProjects: 45,
-//     country: 'United Arab Emirates',
-//     city: 'Dubai',
-//     languages: ['English', 'Arabic', 'Hindi'],
-//     lastActive: '2025-05-03T11:30:00',
-//     specialties: ['Mobile Development', 'React Native', 'Flutter', 'iOS/Android'],
-//     verified: true,
-//     topRated: false,
-//     isFavorite: false,
-//     bio: 'Mobile app developer creating beautiful, functional apps for iOS and Android using the latest technologies.'
-//   },
-//   {
-//     id: 7,
-//     avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-//     fullName: 'Isabella Romano',
-//     username: 'bella_design',
-//     title: 'Graphic Designer',
-//     hourlyRate: 45,
-//     rating: 4.8,
-//     reviews: 76,
-//     completedProjects: 68,
-//     country: 'Italy',
-//     city: 'Milan',
-//     languages: ['English', 'Italian'],
-//     lastActive: '2025-05-02T15:45:00',
-//     specialties: ['Graphic Design', 'Branding', 'Illustration', 'Typography'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: true,
-//     bio: 'Graphic designer with a flair for creating distinctive brand identities and visual storytelling across platforms.'
-//   },
-//   {
-//     id: 8,
-//     avatar: 'https://randomuser.me/api/portraits/men/26.jpg',
-//     fullName: 'Lucas Silva',
-//     username: 'lucas_marketing',
-//     title: 'Digital Marketing Specialist',
-//     hourlyRate: 40,
-//     rating: 4.6,
-//     reviews: 43,
-//     completedProjects: 38,
-//     country: 'Brazil',
-//     city: 'São Paulo',
-//     languages: ['English', 'Portuguese', 'Spanish'],
-//     lastActive: '2025-05-01T13:20:00',
-//     specialties: ['Digital Marketing', 'PPC', 'Social Media', 'Analytics'],
-//     verified: false,
-//     topRated: false,
-//     isFavorite: false,
-//     bio: 'Digital marketing specialist helping businesses grow their online presence through data-driven strategies.'
-//   },
-//   {
-//     id: 9,
-//     avatar: 'https://randomuser.me/api/portraits/women/18.jpg',
-//     fullName: 'Sophie Dubois',
-//     username: 'sophie_product',
-//     title: 'Product Manager',
-//     hourlyRate: 65,
-//     rating: 4.9,
-//     reviews: 51,
-//     completedProjects: 43,
-//     country: 'France',
-//     city: 'Paris',
-//     languages: ['English', 'French'],
-//     lastActive: '2025-05-03T10:15:00',
-//     specialties: ['Product Management', 'Scrum', 'Product Strategy', 'User Stories'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: true,
-//     bio: 'Product manager with a user-focused approach to developing and launching successful digital products.'
-//   },
-//   {
-//     id: 10,
-//     avatar: 'https://randomuser.me/api/portraits/men/36.jpg',
-//     fullName: 'Daniel Kim',
-//     username: 'daniel_seo',
-//     title: 'SEO Specialist',
-//     hourlyRate: 45,
-//     rating: 4.7,
-//     reviews: 38,
-//     completedProjects: 32,
-//     country: 'South Korea',
-//     city: 'Seoul',
-//     languages: ['English', 'Korean'],
-//     lastActive: '2025-05-02T09:30:00',
-//     specialties: ['SEO', 'Content Strategy', 'Keyword Research', 'Technical SEO'],
-//     verified: true,
-//     topRated: false,
-//     isFavorite: false,
-//     bio: 'SEO specialist with proven track record of improving organic traffic and search rankings for global businesses.'
-//   },
-//   {
-//     id: 11,
-//     avatar: 'https://randomuser.me/api/portraits/women/29.jpg',
-//     fullName: 'Nina Patel',
-//     username: 'nina_qa',
-//     title: 'QA Automation Engineer',
-//     hourlyRate: 50,
-//     rating: 4.8,
-//     reviews: 47,
-//     completedProjects: 41,
-//     country: 'India',
-//     city: 'Bangalore',
-//     languages: ['English', 'Hindi', 'Kannada'],
-//     lastActive: '2025-05-01T11:45:00',
-//     specialties: ['QA Automation', 'Selenium', 'Test Planning', 'CI/CD'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: false,
-//     bio: 'QA automation engineer ensuring software quality through comprehensive test strategies and robust automation frameworks.'
-//   },
-//   {
-//     id: 12,
-//     avatar: 'https://randomuser.me/api/portraits/men/61.jpg',
-//     fullName: 'Erik Johansson',
-//     username: 'erik_backend',
-//     title: 'Backend Developer',
-//     hourlyRate: 55,
-//     rating: 4.9,
-//     reviews: 63,
-//     completedProjects: 57,
-//     country: 'Sweden',
-//     city: 'Stockholm',
-//     languages: ['English', 'Swedish'],
-//     lastActive: '2025-05-03T14:00:00',
-//     specialties: ['Backend Development', 'Python', 'Java', 'Microservices'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: true,
-//     bio: 'Backend developer specializing in building scalable, high-performance APIs and services for modern applications.'
-//   },
-//   {
-//     id: 13,
-//     avatar: 'https://randomuser.me/api/portraits/women/37.jpg',
-//     fullName: 'Maria Gonzalez',
-//     username: 'maria_animation',
-//     title: 'Motion Designer',
-//     hourlyRate: 45,
-//     rating: 4.7,
-//     reviews: 41,
-//     completedProjects: 36,
-//     country: 'Mexico',
-//     city: 'Mexico City',
-//     languages: ['English', 'Spanish'],
-//     lastActive: '2025-05-02T16:35:00',
-//     specialties: ['Motion Design', 'After Effects', 'Animation', '3D Modeling'],
-//     verified: false,
-//     topRated: false,
-//     isFavorite: false,
-//     bio: 'Motion designer bringing brands to life through captivating animations and visual storytelling.'
-//   },
-//   {
-//     id: 14,
-//     avatar: 'https://randomuser.me/api/portraits/men/72.jpg',
-//     fullName: 'Tomas Weber',
-//     username: 'tomas_blockchain',
-//     title: 'Blockchain Developer',
-//     hourlyRate: 70,
-//     rating: 4.8,
-//     reviews: 35,
-//     completedProjects: 29,
-//     country: 'Germany',
-//     city: 'Berlin',
-//     languages: ['English', 'German'],
-//     lastActive: '2025-05-01T09:50:00',
-//     specialties: ['Blockchain', 'Smart Contracts', 'Solidity', 'Web3'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: true,
-//     bio: 'Blockchain developer building secure, decentralized solutions and smart contracts for various industries.'
-//   },
-//   {
-//     id: 15,
-//     avatar: 'https://randomuser.me/api/portraits/women/58.jpg',
-//     fullName: 'Ava Johnson',
-//     username: 'ava_ux',
-//     title: 'UX Researcher',
-//     hourlyRate: 50,
-//     rating: 4.9,
-//     reviews: 48,
-//     completedProjects: 42,
-//     country: 'Australia',
-//     city: 'Sydney',
-//     languages: ['English'],
-//     lastActive: '2025-05-03T12:25:00',
-//     specialties: ['UX Research', 'User Testing', 'Interviews', 'Usability Studies'],
-//     verified: true,
-//     topRated: true,
-//     isFavorite: false,
-//     bio: 'UX researcher uncovering user needs and behaviors to inform the design of intuitive, user-centered products.'
-//   }
-// ];
 
 // Filter Component
 const FreelancerFilters = ({ 
@@ -370,7 +68,7 @@ const FreelancerFilters = ({
   };
   
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 border border-gray-100 ">
       {/* Header */}
       <div className="bg-blue-50 p-4 border-b border-blue-100">
         <h3 className="text-lg font-bold text-gray-800">Filter Freelancers</h3>
@@ -642,7 +340,7 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onContact }) => {
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-200 cursor-pointer hover:border-blue-200"
+    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-200 cursor-pointer hover:border-blue-200 "
       onClick={handleCardClick}
     >
       <div className="p-6">
@@ -803,7 +501,10 @@ const FreelancersDirectoryPage = () => {
     setCurrentPage(1);
   };
 
-  const handleToggleFavorite = (id) => {
+  const handleToggleFavorite = async (id) => {
+
+    const res = await axios.post(`/api/users/favorite/`, {userId : localStorage.getItem('userId'), freelancerId: id});
+
     setFreelancers(prev => prev.map(f => 
       f.userId === id ? { ...f, isFavorite: !f.isFavorite } : f
     ));
@@ -941,7 +642,7 @@ const FreelancersDirectoryPage = () => {
   }, [freelancers, searchQuery, sortOption, rateRange, selectedSpecialties, isLoading]);
 
   const LoadingState = () => (
-    <div className="flex justify-center items-center h-64">
+    <div className="flex justify-center items-center h-64 ">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
     </div>
   );
@@ -965,7 +666,7 @@ const FreelancersDirectoryPage = () => {
   );
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen bg-gray-200">
       <div className="max-w-7xl mx-auto">
         {/* Header and search bar (keep this part exactly as in your original code) */}
         

@@ -22,7 +22,7 @@ export default function GeneralList({items, isWithImg, isWithTitle = true}) {
 
                         {
                             items.map((item, index)=>(
-                                <li key={index} className={` hover:bg-black/10  hover:rounded-md  hover:border-l-4 hover:border-amber-400 ${!isWithTitle && 'hover:border-blue-500 hover:text-blue-500'} `}>
+                                <li key={index} className={` hover:bg-black/5  hover:rounded-md  hover:border-l-4 hover:border-amber-400 ${!isWithTitle && 'hover:border-blue-500 hover:text-blue-500'} `}>
                                     <a  className="hover:underline flex items-center scroll-auto gap-4 cursor-pointer p-1 hover:px-3" onClick={()=> navigate('/' + item.name.toLowerCase().replaceAll(' ', '_'))} >
                                         {
                                             isWithImg ? 

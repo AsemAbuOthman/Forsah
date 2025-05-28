@@ -3,7 +3,7 @@ import { SkillCategory } from "./types";
 import {getCategoriesWithSkills} from './api'
 
 // Default user ID for the application
-export const DEFAULT_USER_ID = 2026;
+export const DEFAULT_USER_ID = localStorage.getItem('userData') ? JSON.parse(localStorage.getItem('userData') || '{}').userId[0] : -1;
 
 // Image placeholder URLs
 export const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e";
@@ -39,71 +39,6 @@ export let SKILL_CATEGORIES: SkillCategory[] = [];
 getCategoriesWithSkills().then(data => {
   SKILL_CATEGORIES = data;
 });
-
-// Skill categories and options
-// export const SKILL_CATEGORIES: SkillCategory[] = [
-//   {
-//     name: "Programming Languages",
-//     options: [
-//       { value: "javascript", label: "JavaScript" },
-//       { value: "typescript", label: "TypeScript" },
-//       { value: "python", label: "Python" },
-//       { value: "php", label: "PHP" },
-//       { value: "java", label: "Java" },
-//       { value: "csharp", label: "C#" },
-//       { value: "cpp", label: "C++" },
-//       { value: "ruby", label: "Ruby" },
-//       { value: "go", label: "Go" },
-//       { value: "swift", label: "Swift" },
-//       { value: "kotlin", label: "Kotlin" },
-//     ]
-//   },
-//   {
-//     name: "Frameworks & Libraries",
-//     options: [
-//       { value: "react", label: "React" },
-//       { value: "angular", label: "Angular" },
-//       { value: "vue", label: "Vue.js" },
-//       { value: "nextjs", label: "Next.js" },
-//       { value: "nodejs", label: "Node.js" },
-//       { value: "express", label: "Express" },
-//       { value: "django", label: "Django" },
-//       { value: "flask", label: "Flask" },
-//       { value: "laravel", label: "Laravel" },
-//       { value: "spring", label: "Spring" },
-//       { value: "dotnet", label: ".NET" },
-//     ]
-//   },
-//   {
-//     name: "Databases",
-//     options: [
-//       { value: "mongodb", label: "MongoDB" },
-//       { value: "postgresql", label: "PostgreSQL" },
-//       { value: "mysql", label: "MySQL" },
-//       { value: "firebase", label: "Firebase" },
-//       { value: "sqlite", label: "SQLite" },
-//       { value: "redis", label: "Redis" },
-//       { value: "oracle", label: "Oracle" },
-//       { value: "mssql", label: "Microsoft SQL Server" },
-//     ]
-//   },
-//   {
-//     name: "Other",
-//     options: [
-//       { value: "aws", label: "AWS" },
-//       { value: "azure", label: "Azure" },
-//       { value: "gcp", label: "Google Cloud" },
-//       { value: "docker", label: "Docker" },
-//       { value: "kubernetes", label: "Kubernetes" },
-//       { value: "git", label: "Git" },
-//       { value: "graphql", label: "GraphQL" },
-//       { value: "restapi", label: "REST API" },
-//       { value: "cicd", label: "CI/CD" },
-//       { value: "agile", label: "Agile" },
-//       { value: "scrum", label: "Scrum" },
-//     ]
-//   }
-// ];
 
 export const SKILL_LEVELS = [
   { value: "Beginner", label: "Beginner" },

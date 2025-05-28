@@ -12,15 +12,12 @@ import { useNavigate } from 'react-router-dom';
 const MessagingPage = () => {
   const [location, setLocation] = useLocation();
   const userData = JSON.parse(localStorage.getItem('userData'));
-  const { isConnected, sendMessage, subscribe} = useSocket();
+  const { isConnected, sendMessage, subscribe } = useSocket();
 
   // Extract contactId from URL path
   const contactIdFromUrl = location.startsWith('/messages/') 
     ? location.split('/')[2]
     : null;
-
-    console.log('contactIdFromUrl : ', contactIdFromUrl);
-    
 
   // State management
   const [contacts, setContacts] = useState([]);
@@ -38,13 +35,7 @@ const MessagingPage = () => {
   const navigate = useNavigate();
   const typingTimeoutRef = useRef(null);
   const messagesListRef = useRef(null);
-
-  // Authenticate socket connection
-  // useEffect(() => {
-  //   if (isConnected && userData?.userId[0]) {
-  //     sendMessage('authenticate', { userId: userData.userId[0] });
-  //   }
-  // }, [isConnected, userData?.userId[0], sendMessage]);
+  const messageCache = useRef(new Set()); // For deduplication
 
   // Initialize with contactId from URL if present
   useEffect(() => {
@@ -53,9 +44,6 @@ const MessagingPage = () => {
       if (!isNaN(contactId)) {
         const existingContact = contacts.find(c => c.id === contactId);
         if (existingContact) {
-
-          console.log('existingContact : ', existingContact);
-          
           setActiveContact(existingContact);
         } else {
           fetchContact(contactId);
@@ -64,35 +52,33 @@ const MessagingPage = () => {
     }
   }, [contactIdFromUrl, contacts]);
 
-  // Socket.IO event subscriptions
+  // Socket.IO event subscriptions with deduplication
   useEffect(() => {
     if (!isConnected) return;
 
-
-    // const handleTypingEvent = (data) => {
-    //   handleTypingIndicator(data);
-    // };
-
-
+    const handleNewMessageWithDedup = (data) => {
+      if (messageCache.current.has(data.id)) return;
+      messageCache.current.add(data.id);
+      handleNewMessage(data);
+    };
 
     const handleDeletedMessage = (data) => {
       setMessages(prev => prev.filter(msg => msg.id !== data.messageId));
+      messageCache.current.delete(data.messageId);
     };
 
-
-
     const subscriptions = [
-      subscribe('new_message', handleNewMessage),
-      // subscribe('typing', handleTypingIndicator),
+      subscribe('new_message', handleNewMessageWithDedup),
       subscribe('message_read', handleMessageRead),
       subscribe('online_status', handleOnlineStatusUpdate),
       subscribe('message_deleted', handleDeletedMessage)
     ];
-  
+
     return () => {
       subscriptions.forEach(unsub => unsub());
+      messageCache.current.clear();
     };
-  }, [isConnected, activeContact?.id, userData.userId, subscribe]);
+  }, [isConnected, activeContact?.id, userData?.userId]);
 
   // Fetch contacts on component mount
   useEffect(() => {
@@ -101,13 +87,10 @@ const MessagingPage = () => {
 
   // Load messages when active contact changes
   useEffect(() => {
-    console.log('activeContact : ', activeContact);
-
     if (activeContact) {
       const loadMessagesAndUpdate = async () => {
         await fetchMessages(activeContact.id);
-
-          updateUrl(activeContact.id);
+        updateUrl(activeContact.id);
         
         if (isConnected) {
           sendMessage('join_conversation', {
@@ -157,9 +140,6 @@ const MessagingPage = () => {
       const response = await axios.get(`/api/users/${contactId}`);
       const contact = response.data.user;
       
-      console.log('contact : ', contact);
-      
-
       setContacts(prev => [...prev, {
         id: contact.userId[0],
         name: `${contact.firstName} ${contact.lastName}`,
@@ -198,10 +178,13 @@ const MessagingPage = () => {
           limit: 50
         }
       });
+
+      // Add fetched messages to cache
+      response.data.forEach(msg => messageCache.current.add(msg.messageId));
       
       const formattedMessages = response.data.map(msg => ({
         id: msg.messageId,
-        messageId: msg.messageId, // Ensure consistency
+        messageId: msg.messageId,
         senderId: msg.senderId === userData.userId[0] ? 'me' : msg.senderId,
         text: msg.messageContent,
         timestamp: new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -231,58 +214,54 @@ const MessagingPage = () => {
     } finally {
       setIsLoading(false);
     }
-
   };
 
-  // Message Handlers
+  // Message Handlers with deduplication
   const handleNewMessage = useCallback((messageData) => {
-    const newMessage = {
-      id: messageData.id || Date.now(), // Use messageId or fallback to a temporary ID
-      messageId: messageData.id, // Ensure consistency
-      senderId: messageData.senderId === userData.userId[0] ? 'me' : messageData.senderId,
-      text: messageData.messageContent,
-      timestamp: new Date(messageData.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: messageData.status || 'delivered',
-      ...(messageData.replyTo && { replyingTo: messageData.replyTo }), // Include replyTo if present
-    };
-  
-    // Add to current conversation if active
-    if (
-      activeContact &&
-      (messageData.senderId === activeContact.id || messageData.receiverId === activeContact.id)
-    ) {
-      setMessages((prev) => [...prev, newMessage]);
-  
-      // Send read receipt if the message is from the active contact
-      if (messageData.senderId === activeContact.id) {
-        sendMessage('mark_read', {
-          messageId: messageData.messageId,
-          senderId: userData.userId[0],
-          receiverId: messageData.senderId,
-        });
-      }
-    }
-  
-    // Update the contact list with the latest message
-    setContacts((prev) =>
-      prev.map((contact) => {
-        if (
-          contact.id === messageData.senderId ||
-          (messageData.senderId === userData.userId[0] && contact.id === messageData.receiverId)
-        ) {
-          return {
-            ...contact,
+    // Skip if this is our own message (handled by optimistic update)
+    if (messageData.senderId === userData.userId[0]) return;
+
+    setMessages(prev => {
+      // Check if message already exists
+      const exists = prev.some(msg => 
+        msg.messageId === messageData.id || 
+        (msg.id === messageData.id && msg.senderId !== 'me')
+      );
+      if (exists) return prev;
+
+      const newMessage = {
+        id: messageData.id || Date.now(),
+        messageId: messageData.id,
+        senderId: messageData.senderId,
+        text: messageData.messageContent,
+        timestamp: new Date(messageData.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'delivered',
+        ...(messageData.replyTo && { replyingTo: messageData.replyTo }),
+      };
+
+      return [...prev, newMessage];
+    });
+
+    // Update contact list
+    setContacts(prev => prev.map(contact => 
+      contact.id === messageData.senderId
+        ? { 
+            ...contact, 
             lastMessage: messageData.messageContent,
             timestamp: 'Just now',
-            unreadCount:
-              messageData.senderId === contact.id
-                ? (contact.unreadCount || 0) + 1 // Increment unread count if the message is from the contact
-                : contact.unreadCount,
-          };
-        }
-        return contact;
-      })
-    );
+            unreadCount: contact.id === activeContact?.id ? 0 : (contact.unreadCount || 0) + 1
+          }
+        : contact
+    ));
+
+    // Send read receipt if the message is from the active contact
+    if (activeContact && messageData.senderId === activeContact.id) {
+      sendMessage('mark_read', {
+        messageId: messageData.id,
+        senderId: userData.userId[0],
+        receiverId: messageData.senderId,
+      });
+    }
   }, [activeContact, sendMessage, userData.userId]);
 
   const handleMessageRead = (readData) => {
@@ -345,31 +324,23 @@ const MessagingPage = () => {
     }]);
   
     try {
-      if (isConnected) {
-        sendMessage('send_message', messageData, (response) => {
-          if (response?.status === 'success') {
-            setMessages(prev => prev.map(msg => 
-              msg.id === tempId ? { 
-                ...msg, 
-                id: response.message.id,
-                messageId: response.message.id,
-                status: 'sent'
-              } : msg
-            ));
-          }
-        });
-      } else {
-        // HTTP fallback
-        const response = await axios.post('/api/send', messageData);
-        setMessages(prev => prev.map(msg => 
-          msg.id === tempId ? { 
-            ...msg, 
-            id: response.data.id,
-            messageId: response.data.id,
-            status: 'sent'
-          } : msg
-        ));
-      }
+      sendMessage('send_message', messageData, (response) => {
+        if (response?.status === 'success') {
+          messageCache.current.add(response.message.id);
+          setMessages(prev => prev.map(msg => 
+            msg.id === tempId ? { 
+              ...msg, 
+              id: response.message.id,
+              messageId: response.message.id,
+              status: 'sent'
+            } : msg
+          ));
+        } else {
+          setMessages(prev => prev.map(msg => 
+            msg.id === tempId ? { ...msg, status: 'failed' } : msg
+          ));
+        }
+      });
     } catch (error) {
       setMessages(prev => prev.map(msg => 
         msg.id === tempId ? { ...msg, status: 'failed' } : msg
@@ -385,10 +356,9 @@ const MessagingPage = () => {
     if (!confirmed) return;
 
     try {
-      // Optimistically remove from UI immediately
       setMessages(prev => prev.filter(msg => msg.messageId !== messageId));
+      messageCache.current.delete(messageId);
       
-      // Send delete request to server
       await axios.delete(`/api/message`, {
         params: { 
           userId: userData.userId[0],
@@ -396,7 +366,6 @@ const MessagingPage = () => {
         }
       });
   
-      // Notify other participants via WebSocket
       if (isConnected && activeContact) {
         sendMessage('delete_message', {
           messageId,
@@ -406,11 +375,9 @@ const MessagingPage = () => {
       }
       
     } catch (err) {
-      // Revert if deletion failed
       setError('Failed to delete message');
       console.error('Error deleting message:', err);
       
-      // Refresh messages to restore the deleted one
       if (activeContact) {
         fetchMessages(activeContact.id);
       }
@@ -490,7 +457,7 @@ const MessagingPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen p-4 bg-gray-200">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Messages</h1>
         

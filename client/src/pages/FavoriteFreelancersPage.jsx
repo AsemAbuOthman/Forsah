@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Star, MapPin, Clock, MessageSquare, User, Briefcase, 
   Award, ChevronRight, Filter, Search, X, MoreHorizontal, DollarSign } from 'lucide-react';
+import axios from 'axios';
 
 // Sample data for favorite freelancers
 const sampleFreelancers = [
@@ -91,6 +92,9 @@ const sampleFreelancers = [
   }
 ];
 
+
+
+
 // Currency symbol helper function
 const getCurrencySymbol = (currencyCode) => {
   const symbols = {
@@ -131,7 +135,25 @@ const getTimeAgo = (dateString) => {
 // FreelancerCard Component
 const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
   const [expanded, setExpanded] = useState(false);
-  
+  const [freelancers, setFreelancers] = useState(sampleFreelancers);
+
+  useEffect(()=>{
+
+    const fetchFavoriteFreelancers = async() => {
+
+      const res = await axios.get(`/api/users/favourite/${JSON.parse(localStorage.getItem('userData').userId[0])}`);
+    
+      if(res.data.users){
+
+        setFreelancers(res.data.users);
+      }
+    }
+
+    fetchFavoriteFreelancers();
+
+  },[])
+
+
   // Color theme based on freelancer id
   const getThemeColor = (id) => {
     const themes = [

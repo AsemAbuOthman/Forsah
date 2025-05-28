@@ -85,7 +85,7 @@ const ProjectCard = ({ project }) => {
   const colorName = colors.primary.split('-')[1].split('-')[0];
   
   return (
-    <div onClick={() => navigate('/proposals', { state: { projectData: project } })} className={`bg-white rounded-xl transition-all duration-300 overflow-hidden cursor-pointer hover:scale-105  shadow-xl hover:shadow-2xl `} 
+    <div onClick={() => navigate('/proposals', { state: { projectData: project } })} className={`bg-gray-100 rounded-xl transition-all duration-300 overflow-hidden cursor-pointer hover:translate-x-4 hover:scale-105 shadow-xl hover:shadow-2xl`} 
           style={{
             boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
             ['--hover-shadow-color']: `var(--${colorName}-300)`
@@ -177,7 +177,7 @@ const SearchBar = ({ onSearch }) => {
   };
   
   return (
-    <form onSubmit={handleSubmit} className="relative">
+    <form onSubmit={handleSubmit} className="relative ">
       <div className="flex shadow-lg rounded-lg overflow-hidden">
         <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-3 flex items-center justify-center">
           <Search className="text-white h-5 w-5" />
@@ -300,7 +300,7 @@ const Filters = ({ filters, setFilters, allProjects }) => {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
+    <div className="bg-white rounded-lg shadow-md p-4  ">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium text-gray-800">Filters</h3>
         <button onClick={clearFilters} className="text-sm bg-rose-50 text-rose-600 hover:bg-rose-100 px-2 py-1 rounded-md transition-colors duration-150">
@@ -562,7 +562,7 @@ const ProjectsPageEnhanced = () => {
     }
 
     return (
-      <div className="flex justify-center mt-8 items-center">
+      <div className="flex justify-center mt-8 items-center ">
         <button
           onClick={prevPage}
           disabled={currentPage === 1}
@@ -644,7 +644,7 @@ const ProjectsPageEnhanced = () => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-6">
+    <div className="bg-gray-50 min-h-screen py-6 bg-gray-200">
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="mb-8 text-center bg-gradient-to-r from-violet-500 to-blue-500 text-white py-8 rounded-lg shadow-md">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">Find Perfect Projects</h1>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Certification } from "../../lib/types";
 import { Button } from "../ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import { useToast } from "../../hooks/use-toast";
 import { format } from "date-fns";
 import { PlusIcon, EyeIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { CERTIFICATE_IMAGES } from '../../lib/constants';
+import { DeleteConfirmationModal } from "../ui/delete-confirmation-modal";
 
 interface CertificationsSectionProps {
   certifications: Certification[];
@@ -13,6 +15,7 @@ interface CertificationsSectionProps {
   onAddCertification?: () => void;
   onEditCertification?: (certification: Certification) => void;
   onViewCertification: (certification: Certification) => void;
+  refetchCertifications?: () => Promise<void>; // Add refetch capability
 }
 
 export default function CertificationsSection({ 
@@ -20,21 +23,39 @@ export default function CertificationsSection({
   isEditable = false,
   onAddCertification,
   onEditCertification,
-  onViewCertification
+  onViewCertification,
+  refetchCertifications
 }: CertificationsSectionProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [certificationToDelete, setCertificationToDelete] = useState<Certification | null>(null);
   
   const deleteMutation = useMutation({
     mutationFn: deleteCertification,
-    onSuccess: (_, certificationId) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    // Optimistic update implementation
+    onMutate: async (certificationId) => {
+      await queryClient.cancelQueries(['certifications']);
+      
+      const previousCertifications = queryClient.getQueryData<Certification[]>(['certifications']);
+      
+      queryClient.setQueryData(['certifications'], (old: Certification[] = []) => 
+        old.filter(c => c.certificationId !== certificationId)
+      );
+      
+      return { previousCertifications };
+    },
+    onSuccess: async () => {
+      if (refetchCertifications) {
+        await refetchCertifications();
+      }
       toast({
         title: "Certification deleted",
         description: "Your certification has been deleted successfully.",
       });
+      setCertificationToDelete(null);
     },
-    onError: (error) => {
+    onError: (error, certificationId, context) => {
+      queryClient.setQueryData(['certifications'], context?.previousCertifications);
       toast({
         title: "Failed to delete certification",
         description: "There was an error deleting your certification.",
@@ -42,12 +63,23 @@ export default function CertificationsSection({
       });
       console.error("Error deleting certification:", error);
     },
+    onSettled: () => {
+      queryClient.invalidateQueries(['certifications']);
+    },
   });
 
-  const handleDelete = (certificationId: number) => {
-    if (confirm("Are you sure you want to delete this certification?")) {
-      deleteMutation.mutate(certificationId);
+  const handleDeleteClick = (certification: Certification) => {
+    setCertificationToDelete(certification);
+  };
+
+  const handleConfirmDelete = () => {
+    if (certificationToDelete) {
+      deleteMutation.mutate(certificationToDelete.certificationId);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setCertificationToDelete(null);
   };
 
   const formatDate = (dateString?: string) => {
@@ -57,12 +89,21 @@ export default function CertificationsSection({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <DeleteConfirmationModal
+        isOpen={!!certificationToDelete}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        itemName={certificationToDelete ? `"${certificationToDelete.certificationTitle}"` : "this certification"}
+        isLoading={deleteMutation.isPending}
+      />
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-gray-800">Certifications</h3>
         {isEditable && onAddCertification && (
           <Button 
             className="text-white gradient-violet"
             onClick={onAddCertification}
+            disabled={deleteMutation.isPending}
           >
             <PlusIcon className="h-4 w-4 mr-1" />
             Add Certification
@@ -77,6 +118,7 @@ export default function CertificationsSection({
             <Button 
               className="mt-4 text-white gradient-violet"
               onClick={onAddCertification}
+              disabled={deleteMutation.isPending}
             >
               <PlusIcon className="h-4 w-4 mr-1" />
               Add Your First Certification
@@ -88,7 +130,10 @@ export default function CertificationsSection({
           {certifications.map((certification) => (
             <div 
               key={certification.certificationId} 
-              className="border border-gray-200 rounded-lg p-4 relative hover:border-blue-300 transition-all card-hover"
+              className={`border border-gray-200 rounded-lg p-4 relative hover:border-blue-300 transition-all card-hover ${
+                deleteMutation.isPending && certificationToDelete?.certificationId === certification.certificationId 
+                  ? 'opacity-50' : ''
+              }`}
             >
               <div className="flex">
                 <div className="flex-shrink-0 mr-3 mt-10">
@@ -113,6 +158,7 @@ export default function CertificationsSection({
                   size="sm" 
                   className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 text-sm mr-3"
                   onClick={() => onViewCertification(certification)}
+                  disabled={deleteMutation.isPending}
                 >
                   <EyeIcon className="h-3 w-3 mr-1" />
                   View
@@ -124,6 +170,7 @@ export default function CertificationsSection({
                       size="icon"
                       className="text-gray-400 hover:text-gray-600 mr-2 h-6 w-6"
                       onClick={() => onEditCertification?.(certification)}
+                      disabled={deleteMutation.isPending}
                     >
                       <PencilIcon className="h-3 w-3" />
                     </Button>
@@ -131,7 +178,8 @@ export default function CertificationsSection({
                       variant="ghost"
                       size="icon"
                       className="text-red-400 hover:text-red-600 h-6 w-6"
-                      onClick={() => handleDelete(certification.certificationId)}
+                      onClick={() => handleDeleteClick(certification)}
+                      disabled={deleteMutation.isPending}
                     >
                       <Trash2Icon className="h-3 w-3" />
                     </Button>

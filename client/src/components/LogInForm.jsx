@@ -82,32 +82,24 @@ const handleSubmit = async (e) => {
     return;
     }
 
-    console.log('before login : ', formData);
-
     try {
-        
     const res = await axios.post('/api/login', formData);
-    
-    console.log('after login : ', res.data?.user);
-    
     setUserData(res.data?.user);
 
     if(res.data?.user){
-
         if (rememberMe) {
-            localStorage.setItem('authData', JSON.stringify(formData));
+        localStorage.setItem('authData', JSON.stringify(formData));
         } else {
-            localStorage.removeItem('authData');
+        localStorage.removeItem('authData');
         }
 
         toast({
-            title: "Welcome back!",
-            description: "You have been successfully logged in",
+        title: "Welcome back!",
+        description: "You have been successfully logged in",
         });
 
         navigate('/dashboard');
     }
-
     } catch (err) {
     console.error(err);
     toast({
@@ -125,27 +117,37 @@ const handleGoogleLogin = useGoogleLogin({
     setIsGoogleLoading(true);
     try {
         const { access_token } = tokenResponse;
-
-        // ✅ Fetch user info from Google
         const res = await axios.get(
         'https://www.googleapis.com/oauth2/v3/userinfo',
-        {
-            headers: {
-            Authorization: `Bearer ${access_token}`,
-            },
-        }
+        { headers: { Authorization: `Bearer ${access_token}` } }
         );
 
-        const userData = res.data;
-        console.log('Google user data:', userData);
+        const getMyIP = await axios.get('https://api.ipify.org?format=json');
+        console.log('User IP:', getMyIP.data.ip);
+
+        const params = new URLSearchParams({
+            ip: getMyIP.data.ip,
+            email: res.data.email,
+            name: res.data.name,
+            picture: res.data.picture,
+            sub: res.data.sub,
+            locale: res.data.locale,
+            given_name: res.data.given_name,
+            family_name: res.data.family_name
+        });
+
+        const userRes = await axios.post(`/api/login/google?${params}`);
+
+        setUserData(userRes.data?.user);
+        localStorage.setItem('authData', userRes.data?.user);
 
         toast({
-        title: `Welcome, ${userData.name}!`,
+        title: `Welcome, ${res.data.name}!`,
         description: 'Google login successful',
         });
 
-        // Now you can save userData to your backend or state
         navigate('/dashboard');
+
     } catch (error) {
         console.error('Google login error:', error);
         toast({
@@ -157,7 +159,6 @@ const handleGoogleLogin = useGoogleLogin({
         setIsGoogleLoading(false);
     }
     },
-
     onError: () => {
     toast({
         title: 'Error',
@@ -168,21 +169,18 @@ const handleGoogleLogin = useGoogleLogin({
     },
 });
 
-console.log('userData : ', userData);
-
-
 return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 px-4">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-tr from-gray-100 to-indigo-50 px-4">
     {isLoading && !localStorage.getItem('authData') ? (
         <div className="flex flex-col items-center justify-center gap-4">
-        <Loader2 className="animate-spin h-12 w-12 text-orange-500" />
-        <p className="text-orange-600">Checking your session...</p>
+        <Loader2 className="animate-spin h-12 w-12 text-violet-600" />
+        <p className="text-violet-700">Checking your session...</p>
         </div>
     ) : (
         <div className="flex flex-col items-center justify-center w-full max-w-lg gap-8 p-8 md:p-10 rounded-2xl shadow-xl bg-white">
         <div className="flex flex-col items-center gap-4">
-            <img className="w-16" src="/icon_light.svg" alt="Logo" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent">
+            <img className="w-44" src="/icon_light.png" alt="Logo" />
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-indigo-500 bg-clip-text text-transparent">
             Sign in to your account
             </h1>
         </div>
@@ -193,7 +191,7 @@ return (
             className="flex items-center justify-center gap-3 w-full py-3 px-5 rounded-lg border border-gray-300 hover:border-gray-400 transition disabled:opacity-70"
         >
             {isGoogleLoading ? (
-            <Loader2 className="animate-spin h-5 w-5 text-orange-500" />
+            <Loader2 className="animate-spin h-5 w-5 text-violet-600" />
             ) : (
             <>
                 <img className="w-5" alt="Google icon" src="https://www.svgrepo.com/show/475656/google-color.svg" />
@@ -218,7 +216,7 @@ return (
                 name="email"
                 required
                 placeholder="your.email@example.com"
-                className={`w-full pl-10 pr-4 py-3 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-0 focus:ring-orange-400 focus:border-orange-400`}
+                className={`w-full pl-10 pr-4 py-3 border ${formErrors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none  focus:ring-violet-500 focus:border-violet-500`}
                 />
             </div>
             {formErrors.email && <p className="text-red-500 text-xs mt-1 ml-2">{formErrors.email}</p>}
@@ -233,12 +231,12 @@ return (
                 name="password"
                 required
                 placeholder="Enter your password"
-                className={`w-full pl-10 pr-10 py-3 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-0 focus:ring-orange-400 focus:border-orange-400`}
+                className={`w-full pl-10 pr-10 py-3 border ${formErrors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none  focus:ring-violet-500 focus:border-violet-500`}
                 />
                 <button
                 type="button"
                 onClick={() => setShowPassword(prev => !prev)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-orange-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-violet-600"
                 >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -252,14 +250,14 @@ return (
                 type="checkbox" 
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)} 
-                className="rounded border-gray-300 text-orange-600 focus:ring-orange-500" 
+                className="rounded border-gray-300 text-violet-600 focus:ring-violet-500" 
                 />
                 <span>Remember me</span>
             </label>
             <button
                 type="button"
-                onClick={() => navigate('/forgot-password')}
-                className="text-orange-600 hover:text-orange-800 hover:underline"
+                onClick={() => navigate('/forgot_password')}
+                className="text-violet-600 hover:text-violet-800 hover:underline"
             >
                 Forgot password?
             </button>
@@ -268,7 +266,7 @@ return (
             <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold text-lg transition hover:from-orange-600 hover:to-yellow-600 disabled:opacity-70"
+            className="w-full py-3 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-500 text-white font-semibold text-lg transition hover:from-violet-700 hover:to-indigo-600 disabled:opacity-70"
             >
             {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -285,7 +283,7 @@ return (
             <button
                 type="button"
                 onClick={() => navigate('/signup')}
-                className="text-orange-600 hover:text-orange-800 font-medium hover:underline"
+                className="text-violet-600 hover:text-violet-800 font-medium hover:underline"
             >
                 Sign Up
             </button>

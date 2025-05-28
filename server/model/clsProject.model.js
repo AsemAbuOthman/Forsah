@@ -224,6 +224,272 @@ class clsProject {
         return result;
     }
 
+
+    static async getMyProjects(userId, page = 1, filters = {}) {
+        let result;
+        try {
+            const pool = await getConnection();
+            const pageSize = 11;
+            const offset = (page - 1) * pageSize;
+    
+            // Base query
+            let query = `
+                SELECT 
+                    projects.projectId, projects.projectTitle, projects.projectDeadline,
+                    projects.minBudget, projects.maxBudget, projects.projectStateId, projectStates.projectStateType,
+                    users.userId, currencies.code, currencies.symbol, countries.countryName,
+                    projects.projectDescription, languages.language, projects.createdAt  
+                FROM projects 
+                INNER JOIN users ON users.userId = projects.userId
+                INNER JOIN currencies ON currencies.currencyId = users.currencyId
+                INNER JOIN countries ON countries.countryId = users.countryId
+                INNER JOIN languages ON languages.languageId = users.languageId
+                INNER JOIN projectStates ON projectStates.projectStateId = projects.projectStateId
+            `;
+    
+            const whereClauses = ['users.userId = @userId'];
+            const params = [{ name: 'userId', value: userId }];
+    
+            // Search filter
+            if (filters.search) {
+                whereClauses.push(`CONTAINS((projects.projectTitle, projects.projectDescription), @search)`);
+                params.push({ name: 'search', value: `"${filters.search}"` });
+            }
+    
+            // Country filter
+            if (filters.countries?.length) {
+                whereClauses.push(`countries.countryName IN (${filters.countries.map((_, i) => `@country${i}`).join(',')})`);
+                filters.countries.forEach((country, i) => {
+                    params.push({ name: `country${i}`, value: country });
+                });
+            }
+    
+            // Language filter
+            if (filters.languages?.length) {
+                whereClauses.push(`languages.language IN (${filters.languages.map((_, i) => `@language${i}`).join(',')})`);
+                filters.languages.forEach((language, i) => {
+                    params.push({ name: `language${i}`, value: language });
+                });
+            }
+    
+            // Currency filter
+            if (filters.currencies?.length) {
+                whereClauses.push(`currencies.code IN (${filters.currencies.map((_, i) => `@currency${i}`).join(',')})`);
+                filters.currencies.forEach((currency, i) => {
+                    params.push({ name: `currency${i}`, value: currency });
+                });
+            }
+    
+            // Project state filter
+            if (filters.projectStates?.length) {
+                whereClauses.push(`projectStates.projectStateType IN (${filters.projectStates.map((_, i) => `@state${i}`).join(',')})`);
+                filters.projectStates.forEach((state, i) => {
+                    params.push({ name: `state${i}`, value: state });
+                });
+            }
+    
+            // Budget filters
+            if (filters.minBudget) {
+                whereClauses.push(`projects.maxBudget >= @minBudget`);
+                params.push({ name: 'minBudget', value: parseFloat(filters.minBudget) });
+            }
+    
+            if (filters.maxBudget) {
+                whereClauses.push(`projects.minBudget <= @maxBudget`);
+                params.push({ name: 'maxBudget', value: parseFloat(filters.maxBudget) });
+            }
+    
+            // Append WHERE clause
+            if (whereClauses.length > 0) {
+                query += ` WHERE ${whereClauses.join(' AND ')}`;
+            }
+    
+            // Sorting & pagination
+            query += ` ORDER BY projects.createdAt DESC OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY;`;
+    
+            const request = pool.request();
+            params.forEach(param => request.input(param.name, param.value));
+    
+            const projectResult = await request.query(query);
+            const projects = projectResult.recordset;
+    
+            // Fetch skills for these projects
+            const projectIds = projects.map(p => p.projectId);
+            const skillsMap = {};
+    
+            if (projectIds.length > 0) {
+                let skillQuery = `
+                    SELECT projectSkills.projectId, projectSkills.skillId, skills.skillName 
+                    FROM projectSkills 
+                    INNER JOIN skills ON skills.skillId = projectSkills.skillId
+                    WHERE projectSkills.projectId IN (${projectIds.map((_, i) => `@projectId${i}`).join(',')})
+                `;
+    
+                const skillRequest = pool.request();
+                projectIds.forEach((id, i) => {
+                    skillRequest.input(`projectId${i}`, id);
+                });
+    
+                if (filters.skills?.length) {
+                    skillQuery += ` AND skills.skillName IN (${filters.skills.map((_, i) => `@skill${i}`).join(',')})`;
+                    filters.skills.forEach((skill, i) => {
+                        skillRequest.input(`skill${i}`, skill);
+                    });
+                }
+    
+                const skillResult = await skillRequest.query(skillQuery);
+                skillResult.recordset.forEach(row => {
+                    if (!skillsMap[row.projectId]) {
+                        skillsMap[row.projectId] = [];
+                    }
+                    skillsMap[row.projectId].push({
+                        skillId: row.skillId,
+                        skillName: row.skillName
+                    });
+                });
+            }
+    
+            // Total count query (with filters and userId)
+            let countQuery = `
+                SELECT COUNT(*) AS total 
+                FROM projects 
+                INNER JOIN users ON users.userId = projects.userId
+                INNER JOIN currencies ON currencies.currencyId = users.currencyId
+                INNER JOIN countries ON countries.countryId = users.countryId
+                INNER JOIN languages ON languages.languageId = users.languageId
+                INNER JOIN projectStates ON projectStates.projectStateId = projects.projectStateId
+            `;
+    
+            if (whereClauses.length > 0) {
+                countQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+            }
+    
+            const countRequest = pool.request();
+            params.forEach(param => countRequest.input(param.name, param.value));
+            const totalResult = await countRequest.query(countQuery);
+            const totalProjects = totalResult.recordset[0].total;
+    
+            result = {
+                projects: projects.map(p => ({
+                    ...p,
+                    skills: skillsMap[p.projectId] || []
+                })),
+                totalProjects
+            };
+    
+        } catch (err) {
+            console.error('Error getting projects:', err);
+            return null;
+        }
+    
+        return result;
+    }
+    
+    static async updateProject(projectId, newData) {
+
+        let result = null;
+        try {
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+                UPDATE projects 
+                    SET projectTitle = ${newData.projectTitle}, projectDescription = ${newData.projectDescription}, minBudget = ${newData.maxBudget}, maxBudget = ${newData.minBudget}, projectDeadline = ${newData.projectDeadline}
+                WHERE projectId = ${newData.projectId}`;
+
+            if (result.rowsAffected[0] > 0) {
+                console.log(`Project ${projectId} updated successfully.`);
+
+                result = await this.getMyProjects(newData.userId, 1, {});
+            } else {
+                console.log(`No project found with ID ${projectId}.`);
+            }
+
+        } catch (error) {
+            console.error('Error updating project:', error);
+        }
+
+        return result;
+    }
+
+    static async deleteProject(projectId, userId) {
+        let result = null;
+        
+        try {
+            const pool = await getConnection();
+    
+            // First, check if the project exists and belongs to the user
+            const check = await pool.request().query`
+                SELECT projectId FROM projects 
+                WHERE projectId = ${projectId} AND userId = ${userId};
+            `;
+    
+            if (check.recordset.length === 0) {
+                console.log("Project not found or access denied.");
+                return { 
+                    success: false, 
+                    message: "Project not found or access denied." 
+                };
+            }
+    
+            // Start transaction
+            const transaction = pool.transaction();
+            await transaction.begin();
+    
+            try {
+                // Delete related proposals
+                await transaction.request().query`
+                    DELETE FROM proposals WHERE projectId = ${projectId};
+                `;
+    
+                // Delete related project skills
+                await transaction.request().query`
+                    DELETE FROM projectSkills WHERE projectId = ${projectId};
+                `;
+    
+                // Finally, delete the project
+                const deleteResult = await transaction.request().query`
+                    DELETE FROM projects 
+                    WHERE projectId = ${projectId};
+                `;
+    
+                // Check if any rows were actually deleted
+                if (deleteResult.rowsAffected[0] > 0) {
+                    await transaction.commit();
+                    result = {
+                        success: true,
+                        message: "Project and related data deleted successfully.",
+                        deletedRows: deleteResult.rowsAffected[0]
+                    };
+                } else {
+                    await transaction.rollback();
+                    result = {
+                        success: false,
+                        message: "No project was deleted."
+                    };
+                }
+    
+            } catch (txErr) {
+                await transaction.rollback();
+                console.error("Transaction error:", txErr);
+                result = { 
+                    success: false, 
+                    message: "Error during deletion.", 
+                    error: txErr 
+                };
+            }
+    
+        } catch (err) {
+            console.error("Error deleting project:", err);
+            result = { 
+                success: false, 
+                message: "Internal server error.", 
+                error: err 
+            };
+        }
+    
+        return result;
+    }
+
 }
 
 

@@ -161,7 +161,7 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
   
   return (
     <div 
-      className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 transform hover:scale-[1.01] relative flex flex-col md:flex-row"
+      className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 transform hover:scale-[1.01] relative flex flex-col md:flex-row "
       style={{
         boxShadow: isHovering 
           ? `0 20px 25px -5px ${accentColor.soft}, 0 10px 10px -5px ${accentColor.soft}` 
@@ -392,7 +392,7 @@ const FreelancerFilters = ({
   };
   
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 border border-gray-100 ">
       {/* Header */}
       <div className="bg-blue-50 p-4 border-b border-blue-100">
         <h3 className="text-lg font-bold text-gray-800">Filter Freelancers</h3>
@@ -819,7 +819,7 @@ const FavoriteFreelancersGrid = () => {
   );
   
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen bg-gray-200">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">

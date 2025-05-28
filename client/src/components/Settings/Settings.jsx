@@ -27,7 +27,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-gray-200">
       <h1 className="text-3xl font-bold text-gray-800 mb-8">Settings</h1>
       <div className="flex flex-col md:flex-row gap-8">
         <div className="md:w-1/4">

@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 import { Save } from 'lucide-react';
+import { UserContext } from '../../../store/UserProvider';
+import axios from 'axios';
+
 
 const ProfileSettings = () => {
+  const [userData, setUserData] = React.useContext(UserContext);
+
   const [formData, setFormData] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'johndoe@example.com',
-    phone: '+1 (555) 123-4567',
-    title: 'Senior Web Developer',
-    bio: 'Experienced web developer with 8+ years of experience in React, Node.js, and modern web technologies.',
-    location: 'San Francisco, CA',
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    email: userData.email,
+    phone: userData.phone,
+    professionalTitle: userData.professionalTitle,
+    profileDescription: userData.profileDescription,
+    city: userData.city,
     website: 'https://johndoe.dev'
   });
 
@@ -24,15 +29,30 @@ const ProfileSettings = () => {
     if (!isEditing) setIsEditing(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would typically send the data to an API
+    
+    const res = await axios.patch(`/api/users/${userData.userId[0]}`, formData);
+
     console.log('Saving profile data:', formData);
     setIsEditing(false);
     
-    // Show success message
-    alert('Profile updated successfully!');
-  };
+    if(res.data) {
+
+      alert('Profile updated successfully!');
+        setUserData(prev => ({
+          ...prev,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          professionalTitle: formData.professionalTitle,
+          profileDescription: formData.profileDescription,
+          city: formData.city
+        }));
+    }
+  }
+
 
   return (
     <div>
@@ -108,28 +128,28 @@ const ProfileSettings = () => {
           </div>
           
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="professionalTitle" className="block text-sm font-medium text-gray-700 mb-1">
               Professional Title
             </label>
             <input
               type="text"
-              id="title"
-              name="title"
-              value={formData.title}
+              id="professionalTitle"
+              name="professionalTitle"
+              value={formData.professionalTitle}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           
           <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-              Location
+            <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+            City
             </label>
             <input
               type="text"
-              id="location"
-              name="location"
-              value={formData.location}
+              id="city"
+              name="city"
+              value={formData.city}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -151,14 +171,14 @@ const ProfileSettings = () => {
         </div>
         
         <div className="mb-6">
-          <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="profileDescription" className="block text-sm font-medium text-gray-700 mb-1">
             Professional Bio
           </label>
           <textarea
-            id="bio"
-            name="bio"
+            id="profileDescription"
+            name="profileDescription"
             rows="4"
-            value={formData.bio}
+            value={formData.profileDescription}
             onChange={handleChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           ></textarea>

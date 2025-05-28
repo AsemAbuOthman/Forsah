@@ -1,14 +1,13 @@
 import { useContext, useState } from "react";
 import ProfileMenu from "./ProfileMenu"
 import { useNavigate } from "react-router-dom";
-import { UserContext } from "../store/UserProvider";
 
 export default function HomeDashboardHeader({children}) {
 
     const [isHover, setIsHover] = useState(false);
     const [tabId, setTabId] = useState(0);
     const navigate = useNavigate();
-    const [userData] = useContext(UserContext);
+    const userData = localStorage.getItem('userData') ? JSON.parse(localStorage.getItem('userData')) : {};
 
     return (
         <>
@@ -17,7 +16,7 @@ export default function HomeDashboardHeader({children}) {
 
                     <div className="hidden md:block md:pr-15">
                         <a href="/dashboard">
-                            <img className="w-80" src="/logo_light.svg" alt="Forsah" />
+                            <img className="w-48" src="/icon_light.png" alt="Forsah" />
                         </a>    
                     </div> 
 
@@ -72,7 +71,7 @@ export default function HomeDashboardHeader({children}) {
                                 }
                             </li>
                             <li className="group flex justify-start cursor-pointer py-5 px-3"   onMouseEnter={() => {setIsHover(true); setTabId(2)}} onMouseLeave={() => {setIsHover(false); setTabId(0)} }>
-                                <button className="hidden md:block bg-black/30 text-white rounded-full px-5 py-0.5 md:py-1 transition delay-150 duration-400 ease-in-out active:translate-x-1   active:scale-93 hover:bg-gradient-to-tr from-[#e7a900] to-[#e1d600] shadow-[0px_0px_5px_0px_rgba(0,0,0,0.6)] " onClick={()=> navigate('/post_project ')}>Post a Project</button>      
+                                <button className="hidden md:block bg-black/30 text-white rounded-full px-5 py-0.5 md:py-1 transition delay-150 duration-400 ease-in-out active:translate-x-1   active:scale-93 hover:bg-gradient-to-tr from-violet-300 cursor-pointer hover:scale-105 to-violet-600 shadow-[0px_0px_5px_0px_rgba(0,0,0,0.6)] " onClick={()=> navigate('/post_project ')}>Post a Project</button>      
                                 {
                                     // tabId == 2 &&  isHover && <HomeHeaderMenu tabs={tabsSecondOption} categories={categoriesSecondOption} otherTalents={otherTalentsSecondOption} secondTabListApi={null}/>
                                 }

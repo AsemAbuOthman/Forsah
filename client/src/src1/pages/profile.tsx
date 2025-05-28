@@ -69,25 +69,24 @@ export default function Profile({ DEFAULT_USER_ID = -1 }) {
     enabled: !!profileUserId
   });
 
-  const { data: portfolios = [], isLoading: isPortfoliosLoading } = useQuery({
+  const { data: portfolios = [], isLoading: isPortfoliosLoading, refetch: refetchPortfolios } = useQuery({
     queryKey: [`/api/users/${profileUserId}/portfolios`],
     queryFn: () => getUserPortfolios(profileUserId),
-    enabled: !!profileUserId
   });
 
-  const { data: certifications = [], isLoading: isCertificationsLoading } = useQuery({
+  const { data: certifications = [], isLoading: isCertificationsLoading, refetch: refetchCertifications } = useQuery({
     queryKey: [`/api/users/${profileUserId}/certifications`],
     queryFn: () => getUserCertifications(profileUserId),
     enabled: !!profileUserId
   });
 
-  const { data: experiences = [], isLoading: isExperiencesLoading } = useQuery({
+  const { data: experiences = [], isLoading: isExperiencesLoading, refetch: refetchExperiences } = useQuery({
     queryKey: [`/api/users/${profileUserId}/experiences`],
     queryFn: () => getUserExperiences(profileUserId),
     enabled: !!profileUserId
   });
 
-  const { data: educations = [], isLoading: isEducationsLoading } = useQuery({
+  const { data: educations = [], isLoading: isEducationsLoading, refetch: refetchEducations  } = useQuery({
     queryKey: [`/api/users/${profileUserId}/educations`],
     queryFn: () => getUserEducations(profileUserId),
     enabled: !!profileUserId
@@ -140,7 +139,7 @@ export default function Profile({ DEFAULT_USER_ID = -1 }) {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-200">
       {/* Header Banner */}
       <div className="gradient-blue h-48 relative">
         <div className="container mx-auto px-4 flex justify-between items-center">
@@ -209,22 +208,23 @@ export default function Profile({ DEFAULT_USER_ID = -1 }) {
 
             {/* Portfolio */}
             <div id="portfolio">
-              <PortfolioSection 
-                portfolios={portfolios} 
-                isEditable={isEditable}
-                onAddPortfolio={isEditable ? () => {
+            <PortfolioSection
+              portfolios={portfolios}
+              isEditable={isEditable}
+              onAddPortfolio={isEditable ? () => {
                   setSelectedPortfolio(undefined);
                   setActiveModal('editPortfolio');
                 } : undefined}
-                onEditPortfolio={isEditable ? (portfolio) => {
-                  setSelectedPortfolio(portfolio);
-                  setActiveModal('editPortfolio');
-                } : undefined}
-                onViewDetails={(portfolio) => {
-                  setSelectedPortfolio(portfolio);
-                  setActiveModal('viewPortfolio');
-                }}
-              />
+              onEditPortfolio={(p) => {
+                setSelectedPortfolio(p);
+                setActiveModal('editPortfolio');
+              }}
+              onViewDetails={(p) => {
+                setSelectedPortfolio(p);
+                setActiveModal('viewPortfolio');
+              }}
+              refetchPortfolios={refetchPortfolios}
+            />
             </div>
 
             {/* Certifications */}
@@ -265,17 +265,19 @@ export default function Profile({ DEFAULT_USER_ID = -1 }) {
 
             {/* Education */}
             <div id="education">
-              <EducationSection 
+              <EducationSection
                 educations={educations}
                 isEditable={isEditable}
                 onAddEducation={isEditable ? () => {
-                  setSelectedEducation(undefined);
+                  setSelectedExperience(undefined);
                   setActiveModal('editEducation');
                 } : undefined}
-                onEditEducation={isEditable ? (education) => {
-                  setSelectedEducation(education);
+                onEditEducation={(e) => {
+                  setSelectedEducation(e);
                   setActiveModal('editEducation');
-                } : undefined}
+                }}
+
+                refetchEducations={refetchEducations}
               />
             </div>
           </div>

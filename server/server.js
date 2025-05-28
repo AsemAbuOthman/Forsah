@@ -1,21 +1,28 @@
 const http = require('http');
+var https = require('https');
 const { Server } = require('socket.io');
 const url = require('url'); 
 const path = require('path');
 const querystring = require('querystring');
 const getRawBody = require('raw-body');
 
-const { getUser, 
+const { 
+        isEmailExist,
+        getUserByGoogle,
+        getUser, 
         getCountries, 
         getCurrencies, 
         getCategories, 
         insertUser, 
         getProfile, 
-        getPortfolios, 
+        getPortfolios,
+        updatePortfolio,
+        deletePortfolio,
         getCertifications, 
         getEducations, 
         getExperiences, 
-        getSkills, 
+        getSkills,
+        createSkills, 
         updateProfile, 
         createPortfolio, 
         getAllCategoriesWithSkills,
@@ -28,17 +35,28 @@ const { getUser,
         createEducation,
         updateEducation,
         deleteEducation,
+        updateProfileImage,
+        updatePassword,
+        forgetPassword,
+        updatePasswordByEmail,
+        updateRole,
+        updateAccountActivation,
+        deleteAccount,
         signOut} = require('./controller/clsUser.controller');
 
 const {
 
     createProject,
-    getProjects
+    getProjects,
+    getMyProjects,
+    updateProject,
+    deleteProject
 } = require('./controller/clsProject.controller');
 
 const{
 
-    getFreelancers
+    getFreelancers,
+    getFavouriteFreelancers,
 } = require('./controller/clsFreelancer.controller');
 
 
@@ -59,16 +77,17 @@ const{
     getMessageHistory,
     deleteMessage
 } = require('./controller/clsMessage.controller');
+
+
 const { default: axios } = require('axios');
-
-
+const { userInfo } = require('os');
 
 const server = http.createServer(async (req, res)=>{
 
     res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization"); 
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
     
     const parsedUrl = url.parse(req.url, true);
     const pathUrl = parsedUrl.pathname;    
@@ -100,6 +119,164 @@ const server = http.createServer(async (req, res)=>{
         return getUser(req, res, body.toString());
     }
 
+    if (pathUrl.startsWith('/api/login/google') && req.method === 'POST')  {
+
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+
+        const {
+            ip,
+            email,
+            name,
+            picture,
+            sub,
+            locale,
+            given_name,
+            family_name,
+            country_name,
+            country_code,
+            city,
+            region,
+            timezone,
+            postal_code,
+            language,
+            currency
+        } = queryParams;
+
+        let googleAccount = {
+            email: email || null,
+            name: name || null,
+            picture: picture || null,
+            sub: sub || null,
+            locale: locale || null,
+            given_name: given_name || null,
+            family_name: family_name || null,
+            country_name: null,
+            country_code: null,
+            city: null,
+            region: null,
+            timezone: null,
+            postal_code: null,
+            language: null,
+            currency: null
+        };
+
+        console.log('Before :  ', googleAccount);
+
+
+        // Wrap the IP API call in a promise
+        const fetchGeoData = () => {
+            return new Promise((resolve, reject) => {
+                const options = {
+                    path: `/${ip}/json/`,
+                    host: 'ipapi.co',
+                    port: 443,
+                    headers: { 'User-Agent': 'nodejs-ipapi-v1.02' }
+                };
+
+                https.get(options, (resp) => {
+                    let body = '';
+
+                    resp.on('data', (chunk) => {
+                        body += chunk;
+                    });
+
+                    resp.on('end', () => {
+                        try {
+                            const loc = JSON.parse(body);
+                            resolve(loc);
+                        } catch (err) {
+                            reject('Failed to parse IP geolocation data.');
+                        }
+                    });
+
+                    resp.on('error', (err) => {
+                        reject('IP API error: ' + err.message);
+                    });
+                });
+            });
+        };
+
+        const loc = await fetchGeoData();
+
+        googleAccount.country_name = loc.country_name || null;
+        googleAccount.country_code = loc.country_code || null;
+        googleAccount.city = loc.city || null;
+        googleAccount.region = loc.region || null;
+        googleAccount.timezone = loc.timezone || null;
+        googleAccount.postal_code = loc.postal || null;
+        googleAccount.language = loc.languages ? loc.languages.split(',')[0] : null;
+        googleAccount.currency = loc.currency || null;
+
+        console.log('After IP API:', googleAccount);
+
+        return getUserByGoogle(req, res, googleAccount);
+    }
+
+    if(pathUrl.startsWith('/api/users/role/') && req.method === 'POST'){
+
+        const userIdStr = pathUrl.split('/api/users/role/')[1];
+        const userId = parseInt(userIdStr, 10);
+    
+        console.log('Parsed userId from URL =>', userId);
+        
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end('Invalid user ID');
+        }
+
+        const body = await getRawBody(req);
+
+        console.log('Role ... : ', body.toString());
+
+        return updateRole(req, res, userId, body.toString());
+    }
+
+    if(pathUrl.startsWith('/api/users/deactivate/') && req.method === 'POST'){
+
+        const userIdStr = pathUrl.split('/api/users/deactivate/')[1];
+        const userId = parseInt(userIdStr, 10);
+    
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end('Invalid user ID');
+        }
+
+        const body = await getRawBody(req);
+
+        console.log('Deactivate ... : ', body.toString());
+
+        return updateAccountActivation(req, res, userId, body.toString());
+    }
+
+    if(pathUrl.startsWith('/api/users/delete/') && req.method === 'DELETE'){
+
+        const userIdStr = pathUrl.split('/api/users/delete/')[1];
+        const userId = parseInt(userIdStr, 10);
+    
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end('Invalid user ID');
+        }
+
+        return deleteAccount(req, res, userId);
+    }
+
+    if(pathUrl === '/api/email' && req.method === 'GET'){
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+
+        const email = queryParams.email;
+
+        if (!email) {
+            res.statusCode = 400;
+            return res.end('Email is required');
+        }
+
+        console.log('Checking email availability ... : ', email);
+
+        return isEmailExist(req, res, email);
+    }
 
     if(pathUrl === '/api/countries'){
 
@@ -156,6 +333,67 @@ const server = http.createServer(async (req, res)=>{
         return getSkills(req, res, userId);
     }
 
+
+    if (pathUrl.startsWith('/api/skills/') && req.method === 'POST')  {  
+
+        let body = await getRawBody(req);
+
+        return createSkills(req, res, body.toString());
+    }
+
+
+    // export const createSkill = async (skillData: Omit<Skill, 'id'>): Promise<Skill> => {
+    //     const response = await api.post('/skills/', skillData);
+    //     return response.data;
+    // };
+    
+    // export const updateSkill = async (skillId: number, skillData: Partial<Skill>): Promise<Skill> => {
+    //     const response = await api.patch(`/skills/${skillId}`, skillData);
+    //     return response.data;
+    // };
+    
+    // export const deleteSkill = async (skillId: number): Promise<void> => {
+    //     await api.delete(`/skills/${skillId}`);
+    // };
+
+    
+    if (pathUrl.startsWith('/api/users/') && pathUrl.includes('/portfolios')  &&  req.method === 'POST') {
+
+        const userIdStr = pathUrl.split('/api/users/')[1];
+        const userId = userIdStr.match(/\d+/)[0];
+        const userIdNum = parseInt(userIdStr, 10);
+    
+        if (isNaN(userId)) {
+            return res.status(400).send('Invalid user ID');
+        }
+
+        console.log('Parsed userId from URL => Portfolio ', userIdNum);
+        const body = await getRawBody(req);
+
+        console.log('Posting  New Portfolio ... body => ', body.toString());
+        
+        return createPortfolio(req, res, userIdNum, body.toString());
+    }
+
+
+    if (pathUrl.startsWith('/api/portfolios') && req.method === 'PATCH') {
+
+        const portfolioIdStr = pathUrl.split('/api/portfolios/')[1];
+        const portfolioId = portfolioIdStr.match(/\d+/)[0];
+        const portfolioIdNum = parseInt(portfolioId, 10);
+    
+        if (isNaN(portfolioId)) {
+            return res.status(400).send('Invalid Portfolio ID');
+        }
+
+        console.log('Parsed portfolioId from URL => Portfolio ', portfolioIdNum);
+        const body = await getRawBody(req);
+
+        console.log('Patching  pdate Portfolio ... body => ', body.toString());
+        
+        return updatePortfolio(req, res, portfolioIdNum, body.toString());
+    }
+
     if (pathUrl.startsWith('/api/users/') && pathUrl.includes('/portfolios')) {
 
         const userIdStr = pathUrl.split('/api/users/')[1];
@@ -168,6 +406,20 @@ const server = http.createServer(async (req, res)=>{
         console.log('Parsed userId from URL =>', userId);
 
         return getPortfolios(req, res, userId);
+    }
+
+    if (pathUrl.startsWith('/api/portfolios/')) {
+
+        const idStr = pathUrl.split('/api/portfolios/')[1];
+        const id = parseInt(idStr, 10);
+    
+        if (isNaN(id)) {
+            return res.status(400).send('Invalid  ID');
+        }
+
+        console.log('Parsed userId from URL =>', id);
+
+        return deletePortfolio(req, res, id);
     }
 
     if (pathUrl.startsWith('/api/users/') && pathUrl.includes('/certifications')) {
@@ -315,19 +567,19 @@ const server = http.createServer(async (req, res)=>{
         return deleteEducation(req, res, educationId);
     }
 
-    if (pathUrl.startsWith('/api/users/') &&  req.method === 'POST' && pathUrl.includes('/portfolios') ) {
-
-        const userIdStr = pathUrl.split('/api/users/')[1];
-        const userId = parseInt(userIdStr, 10);
+    if (pathUrl.startsWith('/api/users/image/') && req.method === 'PATCH') {
+        const idStr = pathUrl.split('/api/users/image/')[1];
+        const id = parseInt(idStr, 10);
     
-        if (isNaN(userId)) {
-            return res.status(400).send('Invalid user ID');
-        }
+        console.log('Parsed userId from URL =>', id);
 
-        console.log('Parsed userId from URL => Portfolio ', userId);
-        
+        if (isNaN(id)) {
+            res.statusCode = 400;
+            return res.end('Invalid  ID');
+        }
+    
         const body = await getRawBody(req);
-        return createPortfolio(req, res, userId, body.toString());
+        return updateProfileImage(req, res, id, body.toString());
     }
 
     if (pathUrl.startsWith('/api/users/') && req.method === 'PATCH') {
@@ -342,6 +594,7 @@ const server = http.createServer(async (req, res)=>{
         const body = await getRawBody(req);
         return updateProfile(req, res, userId, body.toString());
     }
+
 
     if (pathUrl.startsWith('/api/users/')) {
         const userIdStr = pathUrl.split('/api/users/')[1];
@@ -392,6 +645,69 @@ const server = http.createServer(async (req, res)=>{
         return getProjects(req, res, page, filters);
     }
 
+
+    if (pathUrl.startsWith('/api/user/projects')) {
+
+        // Parse URL and query parameters
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+        
+        // Extract parameters with defaults
+        const userId = parseInt(queryParams.userId);
+        const page = parseInt(queryParams.page) || 1;
+        const limit = parseInt(queryParams.limit) || 10;
+
+        const {
+            search,
+            skills,
+            countries,
+            languages,
+            currencies,
+            projectStates,
+            minBudget,
+            maxBudget,
+            sort
+        } = queryParams;
+
+        // Prepare filters object
+        const filters = {
+            search,
+            skills: skills ? skills.split(',') : [],
+            countries: countries ? countries.split(',') : [],
+            languages: languages ? languages.split(',') : [],
+            currencies: currencies ? currencies.split(',') : [],
+            projectStates: projectStates ? projectStates.split(',') : [],
+            minBudget,
+            maxBudget
+        }
+
+        return getMyProjects(req, res, userId, page, filters);
+    }
+
+    if (pathUrl.startsWith('/api/project/') && req.method === 'PATCH') {
+
+        const projectIdStr = pathUrl.split('/api/project/')[1];
+        const projectId = parseInt(projectIdStr, 10);
+
+        const body = await getRawBody(req);
+
+        return updateProject(req, res, projectId, body.toString());
+    }
+
+
+    if (pathUrl.startsWith('/api/project/') && req.method === 'DELETE') {
+
+        const segments = pathUrl.split('/'); 
+    
+        const projectId = parseInt(segments[3], 10); 
+        const userId = parseInt(segments[4], 10);    
+    
+        console.log('Parsed userId from URL =>', userId);
+        console.log('Parsed projectId from URL =>', projectId);
+    
+        return deleteProject(req, res, projectId, userId);
+    }
+
     if (pathUrl.startsWith('/api/freelancers/')) {
 
         // Parse URL and query parameters
@@ -426,6 +742,50 @@ const server = http.createServer(async (req, res)=>{
         }
 
         return getFreelancers(req, res, page, {});
+    }
+
+    if (pathUrl.startsWith('/api/users/favourite/')) {
+
+        const userIdStr = pathUrl.split('/api/users/favourite/')[1];
+        const userId = parseInt(userIdStr, 10);
+
+        if (isNaN(userId) ) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid userId ' }));
+        }
+
+        // Parse URL and query parameters
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+        
+        // Extract parameters with defaults
+        const page = parseInt(queryParams.page) || 1;
+        const limit = parseInt(queryParams.limit) || 10;
+        const {
+        search,
+        skills,
+        countries,
+        languages,
+        currencies,
+        projectStates,
+        minBudget,
+        maxBudget,
+        sort
+        } = queryParams;
+
+        // Prepare filters object
+        const filters = {
+            search,
+            skills: skills ? skills.split(',') : [],
+            countries: countries ? countries.split(',') : [],
+            languages: languages ? languages.split(',') : [],
+            currencies: currencies ? currencies.split(',') : [],
+            projectStates: projectStates ? projectStates.split(',') : [],
+            minBudget,
+            maxBudget
+        }
+
+        return getFavouriteFreelancers(req, res, userId, page, {});
     }
     
     if (pathUrl.startsWith('/api/project/') && req.method === 'POST') {
@@ -561,6 +921,31 @@ const server = http.createServer(async (req, res)=>{
         return deleteMessage(req, res, messageId, userId);
     }
 
+    if (pathUrl.startsWith('/api/password/') && req.method === 'POST') {
+    
+        const body = await getRawBody(req);
+        return updatePasswordByEmail(req, res, body.toString());
+    }
+
+    if (pathUrl.startsWith('/api/password/') && req.method === 'PATCH') {
+        const userIdStr = pathUrl.split('/api/password/')[1];
+        const userId = parseInt(userIdStr, 10);
+    
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end('Invalid user ID');
+        }
+    
+        const body = await getRawBody(req);
+        return updatePassword(req, res, userId, body.toString());
+    }
+
+    if (pathUrl.startsWith('/api/forget_password') && req.method === 'POST') {
+    
+        const body = await getRawBody(req);
+        return forgetPassword(req, res, body.toString());
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'Error', message: 'Not Found' }));
     return;
@@ -623,7 +1008,6 @@ const server = http.createServer(async (req, res)=>{
             }
 
             console.log('savedMessage : ', savedMessage);
-
 
             const newMessage = {
                 id: savedMessage.messageId,
@@ -738,6 +1122,8 @@ const server = http.createServer(async (req, res)=>{
         console.error(`Socket error (${socket.id}):`, error);
         });
     });
+
+
 
 
 const port = 3000;

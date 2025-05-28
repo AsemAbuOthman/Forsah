@@ -92,7 +92,7 @@ export default function HomeHeader() {
 
                     <div className="hidden md:block md:pr-15">
                         <a href="/">
-                            <img className="w-80" src="/logo_light.svg" alt="Forsah" />
+                            <img className="w-52" src="/icon_light.png" alt="Forsah" />
                         </a>    
                     </div> 
 

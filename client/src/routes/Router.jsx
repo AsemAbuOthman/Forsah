@@ -27,7 +27,9 @@ import SimpleProposalDemo from '../pages/SimpleProposalDemo';
 import LogOut from '../components/LogOut';
 import SocketProvider from '../components/messaging/WebSocketProvider';
 import PaymentPage from '../components/payment/PaymentPage';
-
+import ProjectsTable from '../components/ProjectsTable';
+import StarRating from '../components/StarRating';
+import ForgotPasswordForm from '../components/ForgetPasswordForm';
 
 const queryClient = new QueryClient();
 
@@ -48,6 +50,7 @@ export default function Router() {
                     <Link to="/"></Link>
                     <Link to="/signin"></Link>
                     <Link to="/login"></Link>
+                    <Link to="/forgot_password"></Link>
                     <Link to="/dashboard"></Link>
                     <Link to="/profile"></Link>
                     <Link to="/profile/:id"></Link>
@@ -61,6 +64,8 @@ export default function Router() {
                     <Link to="/projects"></Link>
                     <Link to="/proposals"></Link>
                     <Link to="/payment"></Link>
+                    <Link to="/projects_table"></Link>
+                    <Link to="/rating"></Link>
                 </nav>
 
                 <Routes>
@@ -69,6 +74,23 @@ export default function Router() {
                     <Route path='/signup' element={<SignUp />} />
                     <Route path='/login' element={<LogInForm />} />
                     <Route path='/logout' element={<LogOut />} />
+                    <Route path="/forgot_password" element={<ForgotPasswordForm />} />
+
+                    {/* <Route path='/rating' element={                   
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
+                                <DashboardHeader/>
+                                    <StarRating project={project} proposal={proposal} />
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>} /> */}
+
+                    <Route path='/projects_table' element={                   
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
+                                <DashboardHeader/>
+                                    <ProjectsTable userId={JSON.parse(localStorage.getItem('userData'))?.userId[0]} />
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>} />
 
                     <Route path='/payment' element={
                         <ProtectedDashboardRoute>

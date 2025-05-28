@@ -12,7 +12,6 @@ class clsUser{
 
             console.log('isClosed : ', isClosed);
             
-
             if(isClosed)
             {
                 console.log('Connection closed successfully .' );
@@ -63,7 +62,155 @@ class clsUser{
         return result; 
     }
 
-    static async updateProfile(id, newData){
+    static async updateProfile(id, newData) {
+        try {
+            const pool = await getConnection();
+            const request = pool.request();
+    
+            // Input parameters for users table
+            request.input('userId', id);
+            request.input('firstName', newData.firstName);
+            request.input('lastName', newData.lastName);
+            request.input('professionalTitle', newData.professionalTitle);
+            request.input('hourlyRate', newData.hourlyRate);
+            
+            // Input parameters for profiles table
+            request.input('profileDescription', newData.profileDescription);
+    
+            // Build users SET clause dynamically
+            const userSetParts = [
+                'firstName = @firstName',
+                'lastName = @lastName',
+                'professionalTitle = @professionalTitle',
+                'hourlyRate = @hourlyRate'
+            ];
+    
+            // Add optional fields if they exist
+            if (newData.email !== undefined) {
+                userSetParts.push('email = @email');
+                request.input('email', newData.email);
+            }
+            if (newData.city !== undefined) {
+                userSetParts.push('city = @city');
+                request.input('city', newData.city);
+            }
+            if (newData.phone !== undefined) {
+                userSetParts.push('phone = @phone');
+                request.input('phone', newData.phone);
+            }
+    
+            // Construct the SQL query
+            const query = `
+                BEGIN TRANSACTION;
+                
+                DECLARE @profileId INT;
+                
+                SELECT @profileId = profileId FROM profiles WHERE userId = @userId;
+                
+                UPDATE users 
+                SET ${userSetParts.join(', ')}
+                WHERE userId = @userId;
+                
+                UPDATE profiles 
+                SET profileDescription = @profileDescription
+                WHERE userId = @userId;
+                
+                COMMIT TRANSACTION;
+                
+                SELECT * FROM users u
+                JOIN profiles p ON u.userId = p.userId
+                WHERE u.userId = @userId;
+            `;
+    
+            const result = await request.query(query);
+    
+            return result.recordset[0] || null;
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            throw new Error('Failed to update profile');
+        }
+    }
+
+    static async updatePasswordByEmail(newData){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+                UPDATE users SET 
+                    password = ${newData.new}
+                WHERE email = ${newData.email.trim()}`
+
+            if (result.rowsAffected[0] > 0) {
+
+                result = {success: true};
+            }else{
+
+                result = {success: false};
+            }
+            
+            return result;
+        } catch (error) {
+            
+            console.log(error);
+        }
+
+        return result;
+    }
+
+    static async updatePassword(id, newData){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            console.log('update password * :::::::: ', id, ' --- ', newData);
+            
+
+            result = await pool.request().query`
+                SELECT password FROM 
+                    users 
+                WHERE userId = ${id}`
+
+
+            if(result.recordset[0]?.password == null){   
+
+                result = await pool.request().query`
+                    UPDATE users SET 
+                        password = ${newData.new}
+                    WHERE userId = ${id} `
+            }else{
+
+                result = await pool.request().query`
+                    UPDATE users SET 
+                        password = ${newData.new}
+                    WHERE userId = ${id} AND password = ${newData.current};`
+            }
+
+            if (result.rowsAffected[0] > 0) {
+
+                result = {success: true};
+            }else{
+
+                result = {success: false};
+            }
+            
+            return result;
+        } catch (error) {
+            
+            console.log(error);
+        }
+
+        return result;
+    }
+    
+
+    static async updateProfileImage(id, newData){
 
         let result = null;
 
@@ -76,14 +223,6 @@ class clsUser{
                 DECLARE @profileId INT;
 
                 SELECT @profileId = profileId FROM profiles WHERE userId = ${id};
-
-                UPDATE users SET 
-                    firstName = ${newData.firstName}, lastName = ${newData.lastName}, professionalTitle = ${newData.professionalTitle}, hourlyRate = ${newData.hourlyRate}
-                    WHERE userId = ${id} 
-
-                UPDATE profiles SET 
-                    profileDescription = ${newData.profileDescription}
-                    WHERE userId = ${id} 
 
                 UPDATE images SET 
                     imageUrl = ${newData.imageUrl}
@@ -242,6 +381,39 @@ class clsUser{
         }
 
         return result; 
+    }
+
+    static async createSkills(newData) {
+
+        let result = null;
+    
+        try {
+            const pool = await getConnection();
+    
+            if (!newData || newData.length === 0) {
+                return [];
+            }
+
+            const valuesClause = newData.map(skill => 
+                `(${skill.userId}, '${skill.skillId}')`
+            ).join(',');
+    
+            // Execute the batch insert
+            await pool.request().query(`
+                INSERT INTO userSkills 
+                    (userId, skillId)
+                VALUES
+                    ${valuesClause}
+            `);
+
+            result = await this.getSkills(newData[0].userId);
+            
+        } catch (error) {
+            console.error('Error in createSkills:', error);
+            throw error; 
+        }
+    
+        return result;
     }
 
     static async getExperiences(id){
@@ -418,6 +590,207 @@ class clsUser{
         return result; 
     }
 
+    static async isEmailExist(email){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+                SELECT email
+                FROM users 
+                WHERE email = ${email} 
+                `;
+
+            if (result.recordset.length > 0) {
+
+                result = true;
+            }else{
+
+                result = false;
+            }
+
+        } catch (err) {
+            
+            console.log('User : ' + err);
+        }
+
+        return result; 
+    }
+
+    static async findUserByGoogle(googleAccount){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+                SELECT userId
+                    FROM users 
+                WHERE googleId = ${googleAccount.sub} 
+                `;
+                
+
+            if (result.recordset.length === 0) {
+
+                const countryId = await this.getCountryIdByName(googleAccount.country_name);
+                const currencyId = await this.getCurrencyIdByName(googleAccount.currency);
+                const languageId = await this.getLanguageIdByName(googleAccount.language);
+
+                // If user does not exist, create a new user
+                result = await pool.request().query`
+
+                        DECLARE @userId INT;
+
+                        INSERT INTO users (email, username, firstname, lastname, roleId, countryId, city, phone, currencyId, professionalTitle, hourlyRate, languageId, googleId, isActive)
+                        VALUES (${googleAccount.email},
+                                ${googleAccount.name.replace(/\s+/g, '')},
+                                ${googleAccount.given_name},
+                                ${googleAccount.family_name},
+                                1,
+                                ${countryId || 220},
+                                ${googleAccount.city},
+                                NULL,
+                                ${currencyId || 2},
+                                'Freelancer',
+                                0,
+                                ${languageId || 1},
+                                ${googleAccount.sub},
+                                    1);
+
+                        Set @userId = SCOPE_IDENTITY();
+
+
+                        INSERT INTO PROFILES 
+                        (profileDescription, userId)
+                        VALUES(${null}, @userId)
+
+                        DECLARE @newProfileId INT;
+
+                        Set @newProfileId = SCOPE_IDENTITY();
+
+                        INSERT INTO IMAGES 
+                        (imageUrl, imageableType, imageableId)
+                        VALUES(${googleAccount.picture}, 'profile', @newProfileId)
+
+                        SELECT @userId AS userId;
+                `;
+
+                if (result.recordset.length > 0) {
+
+                    result.recordset[0].userId = parseInt(result.recordset[0].userId);
+                }
+            }
+
+            console.log('result before : ', result);
+            
+            result = await this.getProfile(result.recordset[0].userId);
+
+            console.log('result after : ', result);
+
+        } catch (err) {
+            
+            console.log('User : ' + err);
+        }
+
+        return result; 
+    }
+
+    
+    static async getCountryIdByName(name){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+                SELECT countryId
+                    FROM countries 
+                WHERE countryName = ${name};
+                `;
+
+                if (result.recordset.length > 0) {
+
+                    result = result.recordset[0]?.countryId;
+                }else{
+
+                    result = null;
+                }
+
+        } catch (err) {
+            
+            console.log('User : ' + err);
+        }
+
+        return result; 
+    }
+
+
+    static async getCurrencyIdByName(name){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+                SELECT currencyId
+                    FROM currencies 
+                WHERE code = ${name};
+                `;
+
+                if (result.recordset.length > 0) {
+
+                    result = result.recordset[0]?.currencyId;
+                }else{
+
+                    result = null;
+                }
+
+        } catch (err) {
+            
+            console.log('User : ' + err);
+        }
+
+        return result; 
+    }
+
+    static async getLanguageIdByName(name){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+                SELECT languageId
+                    FROM languages 
+                WHERE isoCode like '%' + ${name} + '%';
+                `;
+
+                if (result.recordset.length > 0) {
+
+                    result = result.recordset[0]?.languageId;
+                }else{
+
+                    result = null;
+                }
+
+        } catch (err) {
+            
+            console.log('User : ' + err);
+        }
+
+        return result; 
+    }
 
     static async getAllCountries(){
         let result = null;
@@ -529,6 +902,7 @@ class clsUser{
         console.log('User : ', user);
         
 
+
         try {
             
             const pool = await getConnection();
@@ -636,26 +1010,19 @@ class clsUser{
                         `);
                     }
 
-
-                for (const interest of newData.skillId) {
-                    // Step 1: Get all skills for that category
-                    const skillResult = await pool.request().query`
-                        SELECT skillId FROM SKILLS WHERE categoryId = ${interest.value}
-                    `;          
-            
-                    // Step 2: Map skills to insert values
-                    const skillValues = skillResult.recordset
-                        .map(skill => `(${newUserId}, ${skill.skillId})`)
+                    const skillValues = newData.skillId
+                        .map(skill => `(${sampleProjectId}, ${parseInt(skill)})`)
                         .join(', ');
+
+                        console.log('skillValues : ', skillValues);
             
                     // Step 3: Insert skills into USER_SKILLS
                     if (skillValues) {
                         await pool.query(`
                             INSERT INTO sampleProjectSkills (sampleProjectId, skillId)
-                                VALUES(@sampleProjectId); ${skillValues}
+                                VALUES ${skillValues}
                         `);
                     }
-                }
 
                 result = await this.getPortfolios(id);
             }
@@ -667,6 +1034,158 @@ class clsUser{
 
         return result;
     } 
+
+    static async updatePortfolio(portfolioId, updatedData) {
+        let result = null;
+        let result1 = null;
+        let result2 = null;
+        let result3 = null;
+        let result4 = null;
+        let result5 = null;
+        let result6 = null;
+    
+        try {
+            const pool = await getConnection();
+    
+            // First update the sample project details
+            result1 = await pool.request().query`
+                UPDATE sampleProjects
+                SET 
+                    sampleProjectTitle = ${updatedData.sampleProjectTitle},
+                    sampleProjectDescription = ${updatedData.sampleProjectDescription},
+                    completionDate = ${updatedData.completionDate},
+                    sampleProjectUrl = ${updatedData.sampleProjectUrl}
+                WHERE portfolioId = ${portfolioId}
+            `;
+    
+            // Get the sampleProjectId for this portfolio
+            result2 = await pool.request().query`
+                SELECT sampleProjectId FROM sampleProjects WHERE portfolioId = ${portfolioId}
+            `;
+            
+            if (result2.recordset.length === 0) {
+                throw new Error("Sample project not found for portfolio");
+            }
+    
+            const sampleProjectId = result2.recordset[0].sampleProjectId;
+    
+            // Handle images - first delete existing ones, then add new ones
+            result3 = await pool.request().query`
+                DELETE FROM images 
+                WHERE imageableId = ${sampleProjectId} 
+                AND imageableType = 'portfolio'
+            `;
+    
+            if (updatedData.images && updatedData.images.length > 0) {
+                const imagesUrlValues = updatedData.images
+                    .map((singleImageUrl) => `('${singleImageUrl.imageUrl}', ${sampleProjectId}, 'portfolio')`)
+                    .join(', ');
+    
+                if (imagesUrlValues) {
+                    result4 = await pool.query(`
+                        INSERT INTO images (imageUrl, imageableId, imageableType)
+                        VALUES ${imagesUrlValues}
+                    `);
+                }
+            }
+    
+            // Handle skills - first delete existing ones, then add new ones
+            result5 = await pool.request().query`
+                DELETE FROM sampleProjectSkills 
+                WHERE sampleProjectId = ${sampleProjectId}
+            `;
+    
+            if (updatedData.skillId && updatedData.skillId.length > 0) {
+                const skillValues = updatedData.skillId
+                    .map((skill) => {
+                        // Handle both object format (from form) and direct number
+                        const skillId = typeof skill === 'object' ? parseInt(skill.value) : parseInt(skill);
+                        return `(${sampleProjectId}, ${skillId})`;
+                    })
+                    .join(', ');
+    
+                if (skillValues) {
+                    result6 = await pool.query(`
+                        INSERT INTO sampleProjectSkills (sampleProjectId, skillId)
+                        VALUES ${skillValues}
+                    `);
+                }
+            }
+    
+            if(result1 || result2 || result3 || result4 || result5 || result6) {
+
+                result = true;
+            }else{
+
+                result = false;
+            }
+    
+        } catch (error) {
+            console.error("Error updating portfolio:", error);
+            throw error;
+        }
+    
+        return result;
+    }
+
+    static async deletePortfolio(portfolioId) {
+        const pool = await getConnection();
+        const transaction = pool.transaction(); // Create a transaction object
+    
+        try {
+            await transaction.begin(); // Start the transaction
+    
+            // 1. Get the sampleProjectId for this portfolio
+            const sampleProjectResult = await transaction.request().query`
+                SELECT sampleProjectId FROM sampleProjects WHERE portfolioId = ${portfolioId}
+            `;
+    
+            if (sampleProjectResult.recordset.length === 0) {
+                throw new Error("Sample project not found for portfolio");
+            }
+    
+            const sampleProjectId = sampleProjectResult.recordset[0].sampleProjectId;
+    
+            // 2. Delete all images
+            await transaction.request().query`
+                DELETE FROM images 
+                WHERE imageableId = ${sampleProjectId} 
+                AND imageableType = 'portfolio'
+            `;
+    
+            // 3. Delete all skills
+            await transaction.request().query`
+                DELETE FROM sampleProjectSkills 
+                WHERE sampleProjectId = ${sampleProjectId}
+            `;
+    
+            // 4. Delete the sample project
+            await transaction.request().query`
+                DELETE FROM sampleProjects 
+                WHERE sampleProjectId = ${sampleProjectId}
+            `;
+    
+            // 5. Delete the portfolio
+            await transaction.request().query`
+                DELETE FROM portfolios 
+                WHERE portfolioId = ${portfolioId}
+            `;
+    
+            await transaction.commit(); // Commit if all succeeds
+            return true;
+    
+        } catch (error) {
+            if (transaction) {
+                try {
+                    await transaction.rollback(); // Rollback on error
+                } catch (rollbackError) {
+                    console.error("Rollback failed:", rollbackError);
+                }
+            }
+            console.error("Error deleting portfolio:", error);
+            throw error;
+        }
+    }
 
 
     static async createCertification( newData){
@@ -871,6 +1390,105 @@ class clsUser{
 
         return result; 
     }
+
+    static async updateRole(userId, newData){
+
+        let result = null;
+
+        console.log('userId : ', userId, ' newData : ', newData);
+        
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+
+                    UPDATE users SET 
+                    roleId = ${newData.role}
+                    WHERE userId = ${userId}
+                `;
+                
+                if(result.rowsAffected[0] > 0) {
+
+                    result = {success: true};
+                }else{
+
+                    result = {success: false};
+                }
+                
+        } catch (err) {
+            
+            console.log('user roles : ' + err);
+        } 
+
+        return result; 
+    }
+
+    static async updateAccountActivation(userId, newData){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+
+                    UPDATE users SET 
+                    isActive = ${newData.isActive}
+                    WHERE userId = ${userId}
+                `;
+                
+                if(result.rowsAffected[0] > 0) {
+
+                    result = {success: true};
+                }else{
+
+                    result = {success: false};
+                }
+                
+                console.log('Here : ', result);
+        } catch (err) {
+            
+            console.log('user activation : ' + err);
+        } 
+
+        return result; 
+    }
+
+    static async deleteAccount(userId){
+
+        let result = null;
+
+        try {
+            
+            const pool = await getConnection();
+
+            result = await pool.request().query`
+
+                    DELETE FROM  
+                        users 
+                    WHERE userId = ${userId}
+                `;
+                
+                if(result.rowsAffected[0] > 0) {
+
+                    result = {success: true};
+                }else{
+
+                    result = {success: false};
+                }
+                
+                console.log('Here : ', result);
+        } catch (err) {
+            
+            console.log('user deletion : ' + err);
+        } 
+
+        return result; 
+    }
+
 }
 
 
@@ -898,5 +1516,6 @@ class clsUser{
 //     "userId": 2026
 //     })
 // )
+
 
 module.exports = clsUser;
