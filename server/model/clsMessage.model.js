@@ -155,7 +155,7 @@ class clsMessage{
             
                 INSERT INTO replies 
                     (messageId, replyMessageId)
-                VALUES(${replyData.messageId}, ${messageResult.messageId});
+                VALUES(${messageResult.messageId}, ${replyData.messageId});
             `;
 
             if(result){

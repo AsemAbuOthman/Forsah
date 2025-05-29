@@ -92,7 +92,7 @@ const ProjectProposalSystem = ({
           <div className="flex flex-col md:flex-row md:items-start gap-6">
             <div className="flex-1">
               <div className="flex justify-between items-start mb-4">
-                <h1 className="text-xl font-bold text-gray-800 ">Project Details</h1>
+                <h1 className="text-2xl font-bold text-gray-800 ">Project Details</h1>
                 <div className="text-right">
                   <div className="text-gray-900 font-bold">${sampleProject.minBudget}.00 – ${sampleProject.maxBudget}.00 {sampleProject.currency}</div>
                   <div className="flex items-center mt-2 text-sm text-gray-700">
@@ -102,7 +102,12 @@ const ProjectProposalSystem = ({
                 </div>
               </div>
               
-              <p className="text-gray-700 mb-5 text-sm">{sampleProject.projectDescription}</p>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-800 mb-3">Description</h2>
+                <div className="whitespace-pre-wrap text-gray-700">
+                  {sampleProject.projectDescription || sampleProject.description || "No description provided"}
+                </div>
+              </div>
 
               <p className="text-gray-700 mb-5">{sampleProject.additionalInfo}</p>
               

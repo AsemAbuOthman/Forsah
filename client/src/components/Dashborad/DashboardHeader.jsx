@@ -10,7 +10,7 @@ export default function DashboardHeader() {
         "My Projects",
         "Inbox",
         "Feedback",
-        "Project Updates",
+        "My Proposals",
         "Bookmarks"
     ];
 
@@ -33,6 +33,11 @@ export default function DashboardHeader() {
             case tabs[3]:
                 navigate('/messages');
             break;
+
+            case tabs[5]:
+                navigate('/proposals_table');
+            break;
+
 
             // default:
             // navigate('/dashboard_page');

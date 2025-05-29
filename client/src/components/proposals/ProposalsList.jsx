@@ -1,4 +1,4 @@
-import React, { useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   Star, 
@@ -12,36 +12,40 @@ import {
   Calendar,
   User,
   Flag,
-  Briefcase
+  Briefcase,
+  CheckCircle,
+  FileText,
+  Send,
+  Shield
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
-/**
- * Component to display a list of proposals for a project with award and chat options
- * 
- * @param {Object} props - Component props
- * @param {Array} props.proposals - Array of proposal objects
- * @param {Object} props.project - Project details
- * @param {boolean} props.isClientView - Whether the component is being viewed by the client (project owner)
- * @param {Function} props.onChatClick - Function to call when chat button is clicked
- * @param {Function} props.onAwardClick - Function to call when award button is clicked
- * @param {Function} props.onProposalUpdate - Function to call when proposal status changes
- * @returns {JSX.Element} - Rendered component
- */
 const ProposalsList = ({ 
   proposals = [], 
   projectId,
   isClientView = false,
-  // onChatClick,
-  // onAwardClick,
-  // onProposalUpdate,
   apiUrl
 }) => {
   const [expandedProposal, setExpandedProposal] = useState(null);
+  const [loadingStates, setLoadingStates] = useState({});
   const userData = JSON.parse(localStorage.getItem('userData'));
   const navigate = useNavigate();
+  const [useProposals, setUseProposals] = useState([]);
 
-  // Toggle proposal details expansion
+  // Animation variants
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    }
+  };
+
   const toggleExpand = (proposalId) => {
     if (expandedProposal === proposalId) {
       setExpandedProposal(null);
@@ -50,403 +54,431 @@ const ProposalsList = ({
     }
   };
 
-  // Handle chat button click
-  // const handleChatClick = (proposal) => {
-  //   if (onChatClick) {
-  //     onChatClick(proposal);
-  //   }
-  // };
-
   const handleChatClick = async (proposal) => {
-    console.log('Chat with freelancer', proposal.userId);
-
-    const response = await axios.post(`/api/contact?senderId=${userData.userId[0]}&recevierId=${proposal.userId}`);
-
-    if(response.data){
-
-      navigate('/messages')
+    setLoadingStates(prev => ({ ...prev, [proposal.proposalId]: { ...prev[proposal.proposalId], chatLoading: true } }));
+    
+    try {
+      const response = await axios.post(`/api/contact?senderId=${userData.userId[0]}&recevierId=${proposal.userId}`);
+      if(response.data) {
+        navigate('/messages');
+      }
+    } catch (error) {
+      console.error('Error initiating chat:', error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [proposal.proposalId]: { ...prev[proposal.proposalId], chatLoading: false } }));
     }
-
-    alert(`Chat functionality would connect you with ${proposal.freelancer.name}`);
-    // In a real application, this would open a chat with the freelancer
   };
 
   const handleAwardClick = async (proposal) => {
-    console.log('Chat with freelancer', proposal.userId);
-
-    // const response = await axios.post(`/api/contact?senderId=${userData.userId[0]}&recevierId=${proposal.userId}`);
-
-    // if(response.data){
-
-      navigate('/payment');
-    // }
-
-    alert(`Chat functionality would connect you with ${proposal.freelancer.name}`);
-    // In a real application, this would open a chat with the freelancer
+    setLoadingStates(prev => ({ ...prev, [proposal.proposalId]: { ...prev[proposal.proposalId], awardLoading: true } }));
+    
+    try {
+      // In a real app, you might want to confirm with the user first
+      // and possibly make an API call to mark the proposal as awarded
+      navigate('/payment', { state: { proposal } });
+    } catch (error) {
+      console.error('Error awarding project:', error);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [proposal.proposalId]: { ...prev[proposal.proposalId], awardLoading: false } }));
+    }
   };
 
-  // Handle award button click
-  // const handleAwardClick = async (proposal) => {
-  //   if (onAwardClick) {
-  //     onAwardClick(proposal);
-  //   }
-  // };
-
-  // Log to debug
-  console.log("Rendering proposals list with:", proposals);
-  
-  const [useProposals, setUseProposals] = useState([]);
-
-  // TEMPORARY: If there are no proposals, use demo data directly in the component
-  // const useProposals = proposals.length > 0 ? proposals : [
-  //   {
-  //     proposalId: 1001,
-  //     projectId: projectId || 123,
-  //     userId: 789,
-  //     proposalAmount: 350,
-  //     proposalDeadline: "2023-06-15",
-  //     proposalDescription: "Hello! I'm very experienced with Excel formulas and VBA. I've worked on many financial spreadsheets that deal with fiscal year calculations. I can fix your issue with the date formulas and ensure they account for the fiscal year differences correctly.\n\nI've attached some examples of similar work I've done in the past. I would approach this by first analyzing your current formulas, understanding the fiscal year requirements, and then implementing a solution that's both accurate and easy to maintain.\n\nLooking forward to working with you!",
-  //     createdAt: new Date().toISOString(),
-  //     proposalStateId: 1,
-  //     firstName: "John",
-  //     lastName: "Smith",
-  //     imageUrl: "https://randomuser.me/api/portraits/men/1.jpg",
-  //     city: "New York, USA",
-  //     countryName: "United States",
-  //     rating: 4.8,
-  //     totalReviews: 57,
-  //     totalEarned: 12500,
-  //     projectsCompleted: 23,
-  //     skills: ["Excel", "VBA", "Python", "Financial Analysis", "Data Visualization", "SQL", "Power BI"]
-  //     }
-  // ];
-  
   useEffect(() => {
     const fetchProposals = async () => {
-
       try {
-
         const response = await axios.get(`${apiUrl}/${projectId}`);
         setUseProposals(response.data?.proposals || []);
-        
       } catch (err) {
         console.error('Error fetching proposals:', err);
-        // setError('Failed to load proposals. Please try again later.');
-        // setLoading(false);
       }
     };
 
     fetchProposals();
   }, [projectId]);
 
-  console.log("Using proposals:", useProposals);
-  
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <h2 className="text-lg font-semibold text-gray-800">Proposals ({useProposals.length})</h2>
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+      <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-50">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-800">Project Proposals ({useProposals.length})</h2>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600">Sorted by:</span>
+            <select className="text-sm bg-white border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option>Most Relevant</option>
+              <option>Newest First</option>
+              <option>Lowest Bid</option>
+              <option>Highest Rating</option>
+            </select>
+          </div>
+        </div>
       </div>
       
       {useProposals.length === 0 ? (
-        <div className="p-6 text-center text-gray-500">
-          <p>No proposals yet for this project.</p>
+        <div className="p-8 text-center">
+          <div className="max-w-md mx-auto">
+            <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <FileText className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No proposals yet</h3>
+            <p className="text-gray-500 mb-6">This project hasn't received any proposals yet. Check back later or share the project to attract freelancers.</p>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+              Share Project
+            </button>
+          </div>
         </div>
       ) : (
-        <div className="divide-y divide-gray-200">
-          {useProposals.map((proposal) => (
-            <div key={proposal.proposalId} className="p-0">
-              {/* Proposal Header - Always visible */}
-              <div 
-                className={`px-4 py-4 cursor-pointer hover:bg-gray-50 transition-all ${
-                  expandedProposal === proposal.proposalId ? 'bg-blue-50' : ''
-                }`}
-                onClick={() => toggleExpand(proposal.proposalId)}
+        <div className="divide-y divide-gray-100">
+          <AnimatePresence>
+            {useProposals.map((proposal) => (
+              <motion.div
+                key={proposal.proposalId}
+                variants={itemVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                layout
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between">
-                  {/* Freelancer Info */}
-                  <div className="flex items-start space-x-3 mb-3 md:mb-0">
-                    <div className="flex-shrink-0">
-                      {proposal.imageUrl ? (
-                        <img 
-                          src={proposal.imageUrl} 
-                          alt={ proposal.username}
-                          className="h-14 w-14 rounded-full object-cover border-2 border-blue-100"
-                        />
-                      ) : (
-                        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-lg">
-                          {proposal?.username?.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center">
-                        <h3 className="font-semibold text-gray-900">{proposal.firstName != null || proposal.lastName != null ? (proposal.firstName + " " + proposal.lastName) : ('@' + proposal.username)}</h3>
-                        <div className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">ID #{proposal.proposalId}</div>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-500 mt-0.5">
-                        <span className="flex items-center">
-                          <Star className="h-4 w-4 text-yellow-400 mr-1" fill="currentColor" />
-                          {/* <span className="font-medium">{proposal.freelancer.rating}</span> */}
-                        </span>
-                        <span className="mx-2">•</span>
-                        <span>{proposal.countryName}</span>
-                        {/* {proposal.freelancer.totalReviews > 0 && (
-                          <>
-                            <span className="mx-2">•</span>
-                            <span>{proposal.freelancer.totalReviews} reviews</span>
-                          </>
-                        )} */}
-                      </div>
-                      
-                      {/* Skills - First 3 only */}
-                      {/* {proposal.freelancer.skills && proposal.freelancer.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {proposal.freelancer.skills.slice(0, 3).map((skill, index) => (
-                            <span 
-                              key={index}
-                              className="inline-block px-1.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                          {proposal.freelancer.skills.length > 3 && (
-                            <span className="text-xs text-gray-500">+{proposal.freelancer.skills.length - 3} more</span>
+                <div className="p-0">
+                  {/* Proposal Header */}
+                  <div 
+                    className={`px-5 py-4 cursor-pointer transition-all hover:bg-blue-50 ${
+                      expandedProposal === proposal.proposalId ? 'bg-blue-50' : ''
+                    }`}
+                    onClick={() => toggleExpand(proposal.proposalId)}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      {/* Freelancer Info */}
+                      <div className="flex items-start space-x-4">
+                        <div className="relative flex-shrink-0">
+                          {proposal.imageUrl ? (
+                            <img 
+                              src={proposal.imageUrl} 
+                              alt={proposal.username}
+                              className="h-14 w-14 rounded-xl object-cover border-2 border-white shadow-sm"
+                            />
+                          ) : (
+                            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-lg shadow-sm">
+                              {proposal?.username?.charAt(0)}
+                            </div>
+                          )}
+                          {proposal.verified && (
+                            <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-0.5 border-2 border-white">
+                              <CheckCircle className="h-4 w-4 text-white" fill="currentColor" />
+                            </div>
                           )}
                         </div>
-                      )} */}
-                    </div>
-                  </div>
-                  
-                  {/* Proposal Summary */}
-                  <div className="flex flex-wrap md:flex-col items-center md:items-end gap-4 md:gap-1">
-                    <div className="flex items-center bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
-                      <DollarSign className="h-5 w-5 mr-1 text-green-600" />
-                      <span className="font-bold text-green-700">${proposal.proposalAmount}</span>
-                    </div>
-                    <div className="flex items-center bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">
-                      <Clock className="h-5 w-5 mr-1 text-orange-600" />
-                      <span className="font-bold text-orange-700">{proposal.proposalDeadline}</span>
-                    </div>
-                    <div className="md:mt-2 flex items-center text-gray-400">
-                      {expandedProposal === proposal.proposalId ? (
-                        <div className="flex items-center text-blue-600">
-                          <span className="text-sm mr-1">Hide details</span>
-                          <ChevronUp className="h-5 w-5" />
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-blue-600">
-                          <span className="text-sm mr-1">View details</span>
-                          <ChevronDown className="h-5 w-5" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Status indicator */}
-                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
-                  <div className="flex items-center text-xs">
-                    <span className="text-gray-500">Submitted:</span>
-                    <span className="ml-1 text-gray-700">
-                      {proposal.createdAt && new Date(proposal.createdAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                  
-                  <div className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
-                    {proposal.proposalStateId === 1 ? 'Pending' : 
-                      proposal.proposalStateId === 2 ? 'Awarded' : 'Under Review'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Expanded Proposal Details */}
-              {expandedProposal === proposal.proposalId && (
-                <div className="px-4 pb-4 pt-2 bg-gray-50 border-t border-gray-100">
-                  {/* Freelancer Detailed Info */}
-                  <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 mr-4">
-                        {proposal.imageUrl ? (
-                          <img 
-                            src={proposal.imageUrl} 
-                            alt={proposal.imageUrl}
-                            className="h-16 w-16 rounded-full object-cover border-2 border-blue-100"
-                          />
-                        ) : (
-                          <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
-                            {proposal?.username?.charAt(0)}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center">
+                            <h3 className="font-semibold text-gray-900 truncate">
+                              {proposal.firstName || proposal.lastName ? 
+                                `${proposal.firstName} ${proposal.lastName}` : 
+                                `@${proposal.username}`}
+                            </h3>
+                            {proposal.topRated && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-800 text-xs rounded flex items-center">
+                                <Award className="h-3 w-3 mr-1" />
+                                Top Rated
+                              </span>
+                            )}
                           </div>
-                        )}
+                          <div className="flex items-center text-sm text-gray-500 mt-1">
+                            <div className="flex items-center">
+                              <Star className="h-4 w-4 text-yellow-400 mr-1" fill="currentColor" />
+                              <span className="font-medium">{proposal.rating || '5.0'}</span>
+                              <span className="mx-1">•</span>
+                              <span>{proposal.totalReviews || 0} reviews</span>
+                            </div>
+                            {proposal.countryName && (
+                              <>
+                                <span className="mx-1">•</span>
+                                <span>{proposal.countryName}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       
-                      <div className="flex-1">
-                        <div className="flex flex-wrap justify-between items-center mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{proposal.firstName != null || proposal.lastName != null ? (proposal.firstName + " " + proposal.lastName) : ('@' + proposal.username)}</h3>
-                          <div className="flex items-center bg-blue-50 px-2 py-1 rounded text-sm">
-                            <Star className="h-4 w-4 text-yellow-500 mr-1" fill="currentColor" />
-                            <span className="font-medium">{proposal.rating}/5.0</span>
-                            <span className="mx-1 text-gray-400">•</span>
-                            <span className="text-gray-600">{proposal.totalReviews} reviews</span>
-                          </div>
+                      {/* Proposal Summary */}
+                      <div className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4">
+                        <div className="flex items-center bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 shadow-sm">
+                          <DollarSign className="h-5 w-5 mr-1.5 text-green-600" />
+                          <span className="font-bold text-green-700">${proposal.proposalAmount}</span>
                         </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-3">
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                            <div>
-                              <div className="text-gray-500 font-medium">Location</div>
-                              <div className="text-gray-800">
-                                { proposal.country || proposal.city || 'Not specified'}
-                                {proposal.country && proposal.city && 
-                                  `${proposal.city}, ${proposal.country}`}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <Calendar className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                            <div>
-                              <div className="text-gray-500 font-medium">Member since</div>
-                              <div className="text-gray-800">
-                                {proposal.joinedDate ? new Date(proposal.joinedDate).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                }) : 'Not available'}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                            <div>
-                              <div className="text-gray-500 font-medium">Total earnings</div>
-                              <div className="text-green-600 font-medium">
-                                ${proposal.totalEarned ? proposal.totalEarned.toLocaleString() : '0'}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <Briefcase className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                            <div>
-                              <div className="text-gray-500 font-medium">Projects completed</div>
-                              <div className="text-gray-800">
-                                {proposal.projectsCompleted || 0}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                            <div>
-                              <div className="text-gray-500 font-medium">Proposal ID</div>
-                              <div className="text-gray-800">#{proposal.proposalId}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <Flag className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                            <div>
-                              <div className="text-gray-500 font-medium">Project ID</div>
-                              <div className="text-gray-800">#{proposal.projectId}</div>
-                            </div>
-                          </div>
+                        <div className="flex items-center bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm">
+                          <Clock className="h-5 w-5 mr-1.5 text-blue-600" />
+                          <span className="font-bold text-blue-700">{proposal.proposalDeadline}</span>
                         </div>
-                        
-                        {proposal.proposalDescription && (
-                          <div className="mt-4 pt-3 border-t border-gray-100">
-                            <h4 className="text-sm font-medium text-gray-700 mb-1">About me</h4>
-                            <p className="text-sm text-gray-600">{proposal.proposalDescription}</p>
-                          </div>
-                        )}
+                        <div className="hidden md:flex items-center text-blue-600">
+                          {expandedProposal === proposal.proposalId ? (
+                            <div className="flex items-center">
+                              <span className="text-sm mr-1">Less</span>
+                              <ChevronUp className="h-5 w-5" />
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <span className="text-sm mr-1">More</span>
+                              <ChevronDown className="h-5 w-5" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Status indicator */}
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+                      <div className="flex items-center text-xs">
+                        <span className="text-gray-500">Submitted:</span>
+                        <span className="ml-1 text-gray-700">
+                          {proposal.createdAt && new Date(proposal.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      
+                      <div className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        proposal.proposalStateId === 1 ? 'bg-blue-100 text-blue-800' : 
+                        proposal.proposalStateId === 2 ? 'bg-green-100 text-green-800' : 
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {proposal.proposalStateId === 1 ? 'Pending Review' : 
+                          proposal.proposalStateId === 2 ? 'Awarded' : 'Under Review'}
                       </div>
                     </div>
                   </div>
 
-                  {/* Proposal Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                      <div className="text-xs uppercase text-green-600 font-semibold mb-1">Bid Amount</div>
-                      <div className="text-xl font-bold text-green-700">${proposal.proposalAmount}</div>
-                    </div>
-                    <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
-                      <div className="text-xs uppercase text-orange-600 font-semibold mb-1">Delivery Time</div>
-                      <div className="text-xl font-bold text-orange-700">{proposal.proposalDeadline}</div>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                      <div className="text-xs uppercase text-blue-600 font-semibold mb-1">Project ID</div>
-                      <div className="text-xl font-bold text-blue-700">#{proposal.projectId}</div>
-                    </div>
-                  </div>
-                  
-                  {/* Cover Letter */}
-                  <div className="text-sm text-gray-700 mb-4">
-                    <h4 className="font-medium text-gray-900 mb-2">Cover Letter</h4>
-                    <div className="p-4 bg-white rounded-lg border border-gray-200 whitespace-pre-wrap">
-                      {proposal.proposalDescription}
-                    </div>
-                  </div>
-                  
-                  {/* Skills Tags */}
-                  {proposal.skills && proposal.skills.length > 0 && (
-                    <div className="mb-5">
-                      <h4 className="font-medium text-gray-900 mb-2 text-sm">Skills</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {proposal.skills.map((skill, index) => (
-                          <span 
-                            key={index}
-                            className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full border border-blue-200"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Action Buttons */}
-                  <div className="mt-6 flex flex-wrap justify-end gap-3 ">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleChatClick(proposal);
-                      }}
-                      className="hover:scale-110 hover:cursor-pointer transition-all duration-300 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2 text-blue-600 " />
-                      Chat
-                    </button>
-                    
-                    {isClientView && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAwardClick(proposal);
-                        }}
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+                  {/* Expanded Proposal Details */}
+                  <AnimatePresence>
+                    {expandedProposal === proposal.proposalId && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
                       >
-                        <Award className="h-4 w-4 mr-2" />
-                        Award
-                      </button>
+                        <div className="px-5 pb-5 pt-2 bg-gray-50 border-t border-gray-100">
+                          {/* Freelancer Detailed Info */}
+                          <div className="mb-6 p-5 bg-white rounded-xl shadow-sm border border-gray-200">
+                            <div className="flex flex-col md:flex-row gap-5">
+                              <div className="flex-shrink-0">
+                                <div className="relative">
+                                  <a href={`/profile/${proposal.userId}`} className="block">
+                                  {proposal.imageUrl ? (
+                                    <img 
+                                      src={proposal.imageUrl} 
+                                      alt={proposal.username}
+                                      className="h-20 w-20 rounded-xl object-cover border-2 border-blue-100 shadow-md"
+                                    />
+                                  ) : (
+                                    <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md">
+                                      {proposal?.username?.charAt(0)}
+                                    </div>
+                                  )}
+                                  {proposal.verified && (
+                                    <div className="absolute -bottom-1 -right-1 bg-blue-500 rounded-full p-1 border-2 border-white">
+                                      <Shield className="h-4 w-4 text-white" />
+                                    </div>
+                                  )}
+                                  </a>
+                                </div>
+                              </div>
+                              
+                              <div className="flex-1">
+                                <div className="flex flex-wrap justify-between items-center mb-3">
+                                <a href={`/profile/${proposal.userId}`} className="block">
+                                  <h3 className="text-xl font-semibold text-gray-900 hover:text-blue-600">
+                                    {proposal.firstName || proposal.lastName ? 
+                                      `${proposal.firstName} ${proposal.lastName}` : 
+                                      `@${proposal.username}`}
+                                  </h3>
+                                  </a>
+                                  <div className="flex items-center space-x-2">
+                                    <div className="flex items-center bg-blue-50 px-3 py-1 rounded-md text-sm shadow-sm">
+                                      <Star className="h-4 w-4 text-yellow-500 mr-1" fill="currentColor" />
+                                      <span className="font-medium">{proposal.rating || '5.0'}</span>
+                                      <span className="mx-1 text-gray-400">•</span>
+                                      <span className="text-gray-600">{proposal.totalReviews || 0} reviews</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                  <div className="flex items-start">
+                                    <MapPin className="h-5 w-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <div className="text-gray-500 font-medium">Location</div>
+                                      <div className="text-gray-800">
+                                        {proposal.city && proposal.countryName ? 
+                                          `${proposal.city}, ${proposal.countryName}` : 
+                                          proposal.countryName || 'Not specified'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start">
+                                    <Calendar className="h-5 w-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <div className="text-gray-500 font-medium">Member since</div>
+                                      <div className="text-gray-800">
+                                        {proposal.joinedDate ? new Date(proposal.joinedDate).toLocaleDateString('en-US', {
+                                          year: 'numeric',
+                                          month: 'short'
+                                        }) : 'Not available'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start">
+                                    <DollarSign className="h-5 w-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <div className="text-gray-500 font-medium">Total earnings</div>
+                                      <div className="text-green-600 font-medium">
+                                        ${proposal.totalEarned ? proposal.totalEarned.toLocaleString() : '0'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start">
+                                    <Briefcase className="h-5 w-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <div className="text-gray-500 font-medium">Projects completed</div>
+                                      <div className="text-gray-800">
+                                        {proposal.projectsCompleted || 0}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Proposal Info Cards */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                            <div className="p-4 bg-gradient-to-br from-green-50 to-green-50 rounded-xl border border-green-100 shadow-sm">
+                              <div className="flex items-center mb-2">
+                                <DollarSign className="h-5 w-5 text-green-600 mr-2" />
+                                <div className="text-sm uppercase text-green-600 font-semibold">Bid Amount</div>
+                              </div>
+                              <div className="text-2xl font-bold text-green-700">${proposal.proposalAmount}</div>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-50 rounded-xl border border-blue-100 shadow-sm">
+                              <div className="flex items-center mb-2">
+                                <Clock className="h-5 w-5 text-blue-600 mr-2" />
+                                <div className="text-sm uppercase text-blue-600 font-semibold">Delivery Time</div>
+                              </div>
+                              <div className="text-2xl font-bold text-blue-700">{proposal.proposalDeadline}</div>
+                            </div>
+                            <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-50 rounded-xl border border-purple-100 shadow-sm">
+                              <div className="flex items-center mb-2">
+                                <Flag className="h-5 w-5 text-purple-600 mr-2" />
+                                <div className="text-sm uppercase text-purple-600 font-semibold">Project ID</div>
+                              </div>
+                              <div className="text-2xl font-bold text-purple-700">#{proposal.projectId}</div>
+                            </div>
+                          </div>
+                          
+                          {/* Cover Letter */}
+                          <div className="mb-6">
+                            <h4 className="font-medium text-gray-900 mb-3 text-lg">Cover Letter</h4>
+                            <div className="p-5 bg-white rounded-xl border border-gray-200 whitespace-pre-line shadow-sm">
+                              {proposal.proposalDescription}
+                            </div>
+                          </div>
+                          
+                          {/* Skills Tags */}
+                          {proposal.skills && proposal.skills.length > 0 && (
+                            <div className="mb-6">
+                              <h4 className="font-medium text-gray-900 mb-3 text-lg">Skills & Expertise</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {proposal.skills.map((skill, index) => (
+                                  <span 
+                                    key={index}
+                                    className="inline-block px-3 py-1.5 bg-blue-100 text-blue-800 text-sm rounded-full border border-blue-200 hover:bg-blue-200 transition-colors"
+                                  >
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Action Buttons */}
+                          <div className="mt-6 flex flex-wrap justify-end gap-3">
+                            <motion.button
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.98 }}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleChatClick(proposal);
+                                navigate('messages/');
+                              }}
+                              disabled={loadingStates[proposal.proposalId]?.chatLoading}
+                              className="inline-flex items-center px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              {loadingStates[proposal.proposalId]?.chatLoading ? (
+                                <>
+                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Connecting...
+                                </>
+                              ) : (
+                                <>
+                                  <MessageCircle className="h-4 w-4 mr-2 text-blue-600" />
+                                  Start Chat
+                                </>
+                              )}
+                            </motion.button>
+                            
+                            {isClientView && (
+                              <motion.button
+                                whileHover={{ scale: 1.03 }}
+                                whileTap={{ scale: 0.98 }}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAwardClick(proposal);
+                                }}
+                                disabled={loadingStates[proposal.proposalId]?.awardLoading}
+                                className="inline-flex items-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                {loadingStates[proposal.proposalId]?.awardLoading ? (
+                                  <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Processing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Award className="h-4 w-4 mr-2" />
+                                    Award Project
+                                  </>
+                                )}
+                              </motion.button>
+                            )}
+                          </div>
+                          
+                          {/* Submission Date */}
+                          <div className="mt-4 text-xs text-gray-500 text-center">
+                            Proposal submitted on {proposal.createdAt && new Date(proposal.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
-                  </div>
-                  
-                  {/* Submission Date */}
-                  <div className="mt-4 text-xs text-gray-500">
-                    Submitted {proposal.createdAt && new Date(proposal.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
+                  </AnimatePresence>
                 </div>
-              )}
-            </div>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>

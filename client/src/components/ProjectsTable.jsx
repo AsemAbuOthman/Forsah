@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { format } from 'date-fns';
-import { Pencil, Trash2, X, Eye } from 'lucide-react';
+import { Pencil, Trash2, X, Eye, SquareArrowOutUpRight } from 'lucide-react';
 import { mockProjects, mockProjectStates } from './mockData';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -223,7 +223,7 @@ return (
 
         {/* Table */}
         <div className="overflow-x-auto  ">
-            <table className="min-w-full divide-y divide-gray-200 ">
+            <table className="min-w-full divide-y divide-gray-200 overflow-hidden">
             <thead className="bg-gray-50 ">
                 <tr>
                 <th className="px-6 py-3 text-left text-md font-medium text-gray-600 uppercase tracking-wider">Title</th>
@@ -236,7 +236,7 @@ return (
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
                 {projects.map((project) => (
-                <tr key={project.projectId} className="hover:bg-black/10 transition-colors duration-150 cursor-pointer hover:shadow-lg hover:scale-102 hover:translate-z-5">
+                <tr key={project.projectId} className="hover:bg-black/10  duration-150 cursor-pointer hover:shadow-lg hover:scale-102 hover:translate-z-5 transition-all">
                     <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{project.projectTitle}</div>
                     </td>
@@ -269,6 +269,12 @@ return (
                         className="text-gray-600 hover:text-blue-700 cursor-pointer transition-colors"
                         >
                         <Eye className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => navigate('/proposals', { state: { projectData: project } })}
+                            className="text-gray-600 hover:text-gray-900 transition-colors hover:cursor-pointer"
+                        >
+                        <SquareArrowOutUpRight  className="w-5 h-5" />
                         </button>
                         <button
                         onClick={() => handleEdit(project)}
@@ -501,8 +507,10 @@ return (
                 {selectedProject && (
                 <div className="space-y-6">
                     <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">{selectedProject.projectTitle}</h3>
-                    <p className="text-gray-500">{selectedProject.projectDescription}</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-8">{selectedProject.projectTitle}</h3>
+                        <pre>
+                            <p className="text-gray-500 max-h-80 overflow-auto border-1 rounded-lg p-2 border-violet-50">{selectedProject.projectDescription}</p>
+                        </pre>
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">

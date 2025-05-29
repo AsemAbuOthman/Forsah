@@ -319,7 +319,7 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onContact }) => {
     skills, 
     verified, 
     topRated, 
-    isFavorite,
+    isFavourite,
     lastActive,
     profileDescription
   } = freelancer;
@@ -423,9 +423,9 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onContact }) => {
                   onToggleFavorite(userId);
                 }}
                 className="p-2 rounded-full hover:bg-gray-50 transition-colors"
-                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                aria-label={isFavourite ? "Remove from favorites" : "Add to favorites"}
               >
-                <Heart className={`w-6 h-6 ${isFavorite ? 'text-red-500 fill-current' : 'text-gray-300'}`} />
+                <Heart className={`w-6 h-6 ${isFavourite ? 'text-red-500 fill-current' : 'text-gray-300'}`} />
               </button>
             </div>
             
@@ -502,15 +502,34 @@ const FreelancersDirectoryPage = () => {
   };
 
   const handleToggleFavorite = async (id) => {
-
-    const res = await axios.post(`/api/users/favorite/`, {userId : localStorage.getItem('userId'), freelancerId: id});
-
-    setFreelancers(prev => prev.map(f => 
-      f.userId === id ? { ...f, isFavorite: !f.isFavorite } : f
-    ));
-    setFilteredFreelancers(prev => prev.map(f => 
-      f.userId === id ? { ...f, isFavorite: !f.isFavorite } : f
-    ));
+    try {
+      const userData = JSON.parse(localStorage.getItem('userData'));
+      if (!userData || !userData.userId) {
+        console.error('User data not found');
+        return;
+      }
+  
+      const freelancer = freelancers.find(f => f.userId === id);
+      if (!freelancer) return;
+  
+      if (freelancer.isFavourite) {
+        // If already favorite, remove from favorites
+        await axios.delete(`/api/favourite/${userData.userId[0]}/${id}`);
+      } else {
+        // If not favorite, add to favorites
+        await axios.post(`/api/favourite/${userData.userId[0]}/${id}`);
+      }
+  
+      // Update state
+      setFreelancers(prev => prev.map(f => 
+        f.userId === id ? { ...f, isFavourite: !f.isFavourite } : f
+      ));
+      setFilteredFreelancers(prev => prev.map(f => 
+        f.userId === id ? { ...f, isFavourite: !f.isFavourite } : f
+      ));
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
   };
 
   const handleContact = (id) => {
@@ -549,7 +568,7 @@ const FreelancersDirectoryPage = () => {
     const fetchFreelancers = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(`/api/freelancers/?page=${currentPage}`);
+        const response = await axios.get(`/api/freelancers/${JSON.parse(localStorage.getItem('userData')).userId[0]}/?page=${currentPage}`);
         const result = response.data;
         
         if (result) {
@@ -560,14 +579,14 @@ const FreelancersDirectoryPage = () => {
             username: user.username,
             professionalTitle: user.professionalTitle || 'Freelancer',
             hourlyRate: user.hourlyRate || Math.floor(Math.random() * 50) + 20,
-            rating: (Math.random() * 1 + 4).toFixed(1), // Random rating 4.0-5.0
-            reviews: Math.floor(Math.random() * 100) + 10, // Random reviews
+            rating: (Math.random() * 1 + 4).toFixed(1),
+            reviews: Math.floor(Math.random() * 100) + 10,
             countryId: user.countryId || 'Unknown',
             city: user.city || 'Unknown',
             skills: user.skills || [],
-            verified: Math.random() > 0.3, // 70% chance verified
-            topRated: Math.random() > 0.7, // 30% chance top rated
-            isFavorite: false,
+            verified: Math.random() > 0.3,
+            topRated: Math.random() > 0.7,
+            isFavourite: user.isFavourite || false, // Use the isFavourite from API response
             lastActive: new Date(Date.now() - Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000).toISOString(),
             profileDescription: user.profile?.profileDescription || 'No bio provided'
           }));

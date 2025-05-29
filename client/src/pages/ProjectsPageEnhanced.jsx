@@ -118,7 +118,7 @@ const ProjectCard = ({ project }) => {
           </div>
         </div>
         
-        <p className="text-gray-700 mb-4 text-sm line-clamp-2"><pre className="whitespace-pre-wrap break-words">{project.projectDescription}</pre></p>
+        <p className="text-gray-700 mb-4 text-sm line-clamp-3"><span className="break-words">{project.projectDescription}</span></p>
         
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div>

@@ -57,14 +57,19 @@ const{
 
     getFreelancers,
     getFavouriteFreelancers,
+    addFavourite,
+    deleteFavourite
 } = require('./controller/clsFreelancer.controller');
 
 
 const{
 
     getProposals,
+    getMyProposals,
     createProposal,
-    checkProposals
+    checkProposals,
+    updateProposal,
+    deleteProposal
 } = require('./controller/clsProposal.controller');
 
 
@@ -567,6 +572,83 @@ const server = http.createServer(async (req, res)=>{
         return deleteEducation(req, res, educationId);
     }
 
+
+    if (pathUrl.startsWith('/api/favourite/') && req.method === 'POST') {
+        const pathParts = pathUrl.replace('/api/favourite/', '').split('/');
+    
+        const userId = parseInt(pathParts[0], 10);
+        const favUserId = parseInt(pathParts[1], 10);
+    
+        console.log(userId, favUserId);
+        
+
+        if (isNaN(userId) || isNaN(favUserId)) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid userId or favUserId' }));
+        }
+    
+        return addFavourite(req, res, userId, favUserId);
+    }
+
+    if (pathUrl.startsWith('/api/favourite/') && req.method === 'DELETE') {
+        const pathParts = pathUrl.replace('/api/favourite/', '').split('/');
+    
+        const userId = parseInt(pathParts[0], 10);
+        const favUserId = parseInt(pathParts[1], 10);
+    
+        if (isNaN(userId) || isNaN(favUserId)) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid userId or favUserId' }));
+        }
+    
+        return deleteFavourite(req, res, userId, favUserId);
+    }
+    
+    if (pathUrl.startsWith('/api/users/favourite/')) {
+
+        const userIdStr = pathUrl.split('/api/users/favourite/')[1];
+        const userId = parseInt(userIdStr, 10);
+
+
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid userId ' }));
+        }
+
+        // Parse URL and query parameters
+        const parsedUrl = url.parse(req.url);
+        const queryParams = querystring.parse(parsedUrl.query);
+        
+        // Extract parameters with defaults
+        const page = parseInt(queryParams.page) || 1;
+        const limit = parseInt(queryParams.limit) || 10;
+        const {
+        search,
+        skills,
+        countries,
+        languages,
+        currencies,
+        projectStates,
+        minBudget,
+        maxBudget,
+        sort
+        } = queryParams;
+
+        // Prepare filters object
+        const filters = {
+            search,
+            skills: skills ? skills.split(',') : [],
+            countries: countries ? countries.split(',') : [],
+            languages: languages ? languages.split(',') : [],
+            currencies: currencies ? currencies.split(',') : [],
+            projectStates: projectStates ? projectStates.split(',') : [],
+            minBudget,
+            maxBudget
+        }
+
+        return getFavouriteFreelancers(req, res, userId, page, {});
+    }
+
     if (pathUrl.startsWith('/api/users/image/') && req.method === 'PATCH') {
         const idStr = pathUrl.split('/api/users/image/')[1];
         const id = parseInt(idStr, 10);
@@ -595,7 +677,6 @@ const server = http.createServer(async (req, res)=>{
         return updateProfile(req, res, userId, body.toString());
     }
 
-
     if (pathUrl.startsWith('/api/users/')) {
         const userIdStr = pathUrl.split('/api/users/')[1];
         const userId = parseInt(userIdStr, 10);
@@ -607,7 +688,6 @@ const server = http.createServer(async (req, res)=>{
         console.log('Parsed userId from URL =>', userId);
         return getProfile(req, res, userId);
     }
-
 
     if (pathUrl.startsWith('/api/projects/')) {
 
@@ -710,50 +790,9 @@ const server = http.createServer(async (req, res)=>{
 
     if (pathUrl.startsWith('/api/freelancers/')) {
 
-        // Parse URL and query parameters
-        const parsedUrl = url.parse(req.url);
-        const queryParams = querystring.parse(parsedUrl.query);
-        
-        // Extract parameters with defaults
-        const page = parseInt(queryParams.page) || 1;
-        const limit = parseInt(queryParams.limit) || 10;
-        const {
-        search,
-        skills,
-        countries,
-        languages,
-        currencies,
-        projectStates,
-        minBudget,
-        maxBudget,
-        sort
-        } = queryParams;
-
-        // Prepare filters object
-        const filters = {
-            search,
-            skills: skills ? skills.split(',') : [],
-            countries: countries ? countries.split(',') : [],
-            languages: languages ? languages.split(',') : [],
-            currencies: currencies ? currencies.split(',') : [],
-            projectStates: projectStates ? projectStates.split(',') : [],
-            minBudget,
-            maxBudget
-        }
-
-        return getFreelancers(req, res, page, {});
-    }
-
-    if (pathUrl.startsWith('/api/users/favourite/')) {
-
-        const userIdStr = pathUrl.split('/api/users/favourite/')[1];
+        const userIdStr = pathUrl.split('/api/freelancers/')[1];
         const userId = parseInt(userIdStr, 10);
 
-        if (isNaN(userId) ) {
-            res.statusCode = 400;
-            return res.end(JSON.stringify({ error: 'Invalid userId ' }));
-        }
-
         // Parse URL and query parameters
         const parsedUrl = url.parse(req.url);
         const queryParams = querystring.parse(parsedUrl.query);
@@ -785,8 +824,9 @@ const server = http.createServer(async (req, res)=>{
             maxBudget
         }
 
-        return getFavouriteFreelancers(req, res, userId, page, {});
+        return getFreelancers(req, res, userId, page, {});
     }
+
     
     if (pathUrl.startsWith('/api/project/') && req.method === 'POST') {
 
@@ -815,6 +855,53 @@ const server = http.createServer(async (req, res)=>{
 
         return  checkProposals(req, res, projectId, freelancerId);
     }
+
+    if (pathUrl.startsWith('/api/my_proposals/') && req.method === 'DELETE') {
+
+        const proposalIdStr = pathUrl.split('/api/my_proposals/')[1];
+        const proposalId = parseInt(proposalIdStr, 10);
+
+        if (isNaN(proposalId) ) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid proposalId ' }));
+        }
+    
+        console.log('Parsed proposalId from URL =>', proposalId);
+
+        return  deleteProposal(req, res, proposalId);
+    }
+
+    if (pathUrl.startsWith('/api/my_proposals/') && req.method === 'PUT') {
+
+        const proposalIdStr = pathUrl.split('/api/my_proposals/')[1];
+        const proposalId = parseInt(proposalIdStr, 10);
+
+        if (isNaN(proposalId) ) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid proposalId ' }));
+        }
+
+        const body = await getRawBody(req);
+
+        return  updateProposal(req, res, proposalId, body.toString());
+    }
+
+    if (pathUrl.startsWith('/api/my_proposals/')) {
+
+        const uesrIdStr = pathUrl.split('/api/my_proposals/')[1];
+        const userId = parseInt(uesrIdStr, 10);
+
+        if (isNaN(userId) ) {
+            res.statusCode = 400;
+            return res.end(JSON.stringify({ error: 'Invalid userId ' }));
+        }
+    
+        console.log('Parsed userId from URL =>', userId);
+
+        return  getMyProposals(req, res, userId);
+    }
+
+
 
     if (pathUrl.startsWith('/api/proposals/')) {
 
@@ -897,7 +984,6 @@ const server = http.createServer(async (req, res)=>{
 
         const senderId = queryParams.userId;
         const receiverId = queryParams.contactId;
-
 
         console.log('Fetching messages request ... : ', senderId + ' ' + receiverId );
 
@@ -1034,6 +1120,41 @@ const server = http.createServer(async (req, res)=>{
             callback({ status: 'error', message: error.message });
             }
         });
+
+        socket.on("send_reply", async (replyData, callback) => {
+            try {
+            const { messageId, replierId, replyContent, receiverId } = replyData;
+        
+            console.log("Sending reply:", replyData);
+        
+            const savedReply = (await axios.post("http://localhost:3000/api/reply", replyData)).data;
+        
+            if (!savedReply) {
+                throw new Error("Failed to save reply");
+            }
+        
+            const newReply = {
+                id: savedReply.replyId,
+                messageId: savedReply.messageId,
+                replierId: savedReply.replierId,
+                replyContent: savedReply.replyContent,
+                timestamp: savedReply.repliedAt,
+            };
+        
+            // Optionally emit to the conversation or specific user
+            const receiverSocketId = userSockets.get(savedReply.originalMessageOwnerId);
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("new_reply", newReply);
+            }
+        
+            callback({ status: "success", reply: newReply });
+        
+            } catch (error) {
+            console.error("Reply error:", error.message);
+            callback({ status: "error", message: error.message });
+            }
+        });
+        
         
         // Add join_conversation handler
         socket.on('join_conversation', ({ userId, contactId }) => {
@@ -1042,15 +1163,14 @@ const server = http.createServer(async (req, res)=>{
         });
         
 
-        // Handle typing indicators
         socket.on('typing', ({ receiverId, isTyping }) => {
-        const senderId = socketUsers.get(socket.id);
-        if (!senderId) return;
-    
-        const recipientSocketId = userSockets.get(receiverId);
-        if (recipientSocketId) {
+            const senderId = socketUsers.get(socket.id);
+            if (!senderId) return;
+        
+            const recipientSocketId = userSockets.get(receiverId);
+            if (recipientSocketId) {
             io.to(recipientSocketId).emit('typing', { senderId, isTyping });
-        }
+            }
         });
 
         socket.on('mark_read', ({ messageId, senderId, receiverId }) => {

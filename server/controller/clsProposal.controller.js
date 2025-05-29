@@ -27,6 +27,29 @@ const clsProposal = require('../model/clsProposal.model');
         }
     }
 
+    const getMyProposals =  async (req, res, userId)=>{
+
+        try {
+            
+            const proposals = await clsProposal.getMyProposals(userId);
+
+            if (proposals) {
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(proposals));
+            } else {
+
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Not found' }));
+            }
+        } catch (error) {
+            
+            console.log(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Internal server error' }));
+        }
+    }
+
     const checkProposals =  async (req, res, projectId, freelancerId)=>{
 
         try {
@@ -81,11 +104,61 @@ const clsProposal = require('../model/clsProposal.model');
         }
     }
 
+    const updateProposal = async (req, res, proposalId, proposalData) => {
+
+        try {
+            
+            const result = await clsProposal.updateProposal(proposalId, JSON.parse(proposalData));
+
+            if(result){
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            }else{
+
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Not found' }));
+            }
+
+        } catch (error) {
+            
+            console.log(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Internal server error !!' }));
+        }
+    }
+
+    const deleteProposal = async (req, res, proposalId) => {
+
+        try {
+            
+            const result = await clsProposal.deleteProposal(proposalId);
+
+            if(result){
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            }else{
+
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Not found' }));
+            }
+
+        } catch (error) {
+            
+            console.log(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Internal server error !!' }));
+        }
+    }
 
 
 module.exports = {
 
     getProposals,
+    getMyProposals,
     createProposal,
-    checkProposals
+    checkProposals,
+    updateProposal,
+    deleteProposal
 }

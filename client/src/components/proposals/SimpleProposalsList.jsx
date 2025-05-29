@@ -121,7 +121,6 @@ const SimpleProposalsList = ({
         //   freelancerId: proposal.freelancerId
         // });
         
-        // For demo purposes, update the proposal state directly
         const updatedProposals = proposals.map(p => {
           if (p.id === proposal.id) {
             return { ...p, proposalStateId: 2 }; // 2 = Awarded

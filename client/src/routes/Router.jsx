@@ -3,6 +3,8 @@ import { Toaster } from "../src1/ProfilePage/ui/toaster";
 import { Toaster as Sonner } from "../src1/ProfilePage/ui/toaster";
 import { TooltipProvider } from "../src1/ProfilePage/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+
 
 import Home from '../pages/Home';
 import LogIn from '../pages/LogIn';
@@ -15,7 +17,7 @@ import LogInForm from '../components/LogInForm';
 import Profile from "../src1/ProfilePage";
 import SignUp from '../pages/SignUp';
 import AccountAnalytics from '../components/AccountAnalytics'
-import  Settings  from '../components/Settings/Settings';
+import Settings  from '../components/Settings/Settings';
 import ProjectsPageEnhanced from '../pages/ProjectsPageEnhanced';
 import DashboardPage from '../pages/DashboardPage';
 import FavoriteFreelancersGrid from '../pages/FavoriteFreelancersGrid';
@@ -30,6 +32,8 @@ import PaymentPage from '../components/payment/PaymentPage';
 import ProjectsTable from '../components/ProjectsTable';
 import StarRating from '../components/StarRating';
 import ForgotPasswordForm from '../components/ForgetPasswordForm';
+import TransactionHistory from '../components/TransactionHistory';
+import ProposalsTable from '../components/ProposalsTable';
 
 const queryClient = new QueryClient();
 
@@ -58,6 +62,7 @@ export default function Router() {
                     <Link to="/projects"></Link>
                     <Link to="/freelancers"></Link>
                     <Link to="/messages"></Link>
+                    <Link to="/messages/:id"></Link>
                     <Link to="/dashboard_page"></Link>
                     <Link to="/favorite_page"></Link>
                     <Link to="/post_project"></Link>
@@ -66,6 +71,8 @@ export default function Router() {
                     <Link to="/payment"></Link>
                     <Link to="/projects_table"></Link>
                     <Link to="/rating"></Link>
+                    <Link to="/transaction_history"></Link>
+                    <Link to="/proposals_table"></Link>
                 </nav>
 
                 <Routes>
@@ -76,13 +83,20 @@ export default function Router() {
                     <Route path='/logout' element={<LogOut />} />
                     <Route path="/forgot_password" element={<ForgotPasswordForm />} />
 
-                    {/* <Route path='/rating' element={                   
+                    <Route path='/proposals_table' element={                   
                         <ProtectedDashboardRoute>
                             <HomeDashboardHeader>
                                 <DashboardHeader/>
-                                    <StarRating project={project} proposal={proposal} />
+                                    <ProposalsTable />
                             </HomeDashboardHeader>
-                        </ProtectedDashboardRoute>} /> */}
+                        </ProtectedDashboardRoute>} />
+
+                    <Route path='/transaction_history' element={                   
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
+                                <TransactionHistory />
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>} />
 
                     <Route path='/projects_table' element={                   
                         <ProtectedDashboardRoute>
@@ -95,7 +109,15 @@ export default function Router() {
                     <Route path='/payment' element={
                         <ProtectedDashboardRoute>
                             <HomeDashboardHeader>
-                                <PaymentPage />
+                                <PayPalScriptProvider
+                                            options={{
+                                                "client-id": "ATcqLOuVAn00dc9WhEM9rOe7AfLx812cYA9nSTzwyGZ1EVTfifGDprLlaSOXxKQMw0NWjKYi0q6sNNlz", // Replace this with your sandbox or live ID
+                                                currency: "USD",
+                                                intent: "capture",
+                                            }}
+                                            >
+                                    <PaymentPage />
+                                </PayPalScriptProvider>
                             </HomeDashboardHeader>
                         </ProtectedDashboardRoute>
                         } />
@@ -122,37 +144,37 @@ export default function Router() {
                         </ProtectedDashboardRoute>
                     } />
 
-                    {/* <Route path='/projects' element={
-                        <ProtectedDashboardRoute>
-                            <HomeDashboardHeader>
-                                <DashboardHeader/>
-                                    <ProjectsPageEnhanced />
-                            </HomeDashboardHeader>
-                        </ProtectedDashboardRoute>
-                    } /> */}
 
                     <Route path='/projects' element={
-                        // <ProtectedDashboardRoute>
-                        // <HomeDashboardHeader>
-                            <ProjectsPageEnhanced />
-                        // </HomeDashboardHeader>
-                        // {/* </ProtectedDashboardRoute> */}
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
+                                <ProjectsPageEnhanced />
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>
                     } />
 
                     <Route path='/proposals' element={
-                        // <ProtectedDashboardRoute>
-                            // <HomeDashboardHeader>
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
                                 <SimpleProposalDemo />
-                            // </HomeDashboardHeader>
-                        // </ProtectedDashboardRoute>
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>
+                    } />
+
+                    <Route path='/proposals:projectData' element={
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
+                                <SimpleProposalDemo />
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>
                     } />
 
                     <Route path='/freelancers' element={
-                        // <ProtectedDashboardRoute>
-                            // <HomeDashboardHeader>
+                        <ProtectedDashboardRoute>
+                            <HomeDashboardHeader>
                                 <FreelancersDirectoryPage />
-                            // </HomeDashboardHeader>
-                        // </ProtectedDashboardRoute>
+                            </HomeDashboardHeader>
+                        </ProtectedDashboardRoute>
                     } />
 
                     <Route path='/dashboard' element={

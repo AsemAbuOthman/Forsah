@@ -26,6 +26,7 @@ export default function Navigation() {
             <NavLink to="/payment">Payment</NavLink>
             <NavLink to="/projects_table">Projects Table</NavLink>
             <NavLink to="/rating">Rating</NavLink>
+            <NavLink to="/transaction_history">Transaction History</NavLink>
             
         </nav>
     );

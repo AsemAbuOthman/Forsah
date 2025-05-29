@@ -3,147 +3,45 @@ import {
   Heart, Star, MapPin, Clock, MessageSquare, User, Briefcase,
   ChevronDown, Filter, Search, X, DollarSign, Award, Check, Shield, Plus
 } from 'lucide-react';
-
-// Sample data for favorite freelancers
-const sampleFreelancers = [
-  {
-    id: 1,
-    username: 'alexdesign',
-    fullName: 'Alex Rodriguez',
-    profileImage: 'https://ui-avatars.com/api/?name=Alex+Rodriguez&background=5046e5&color=fff',
-    rating: 4.9,
-    reviews: 134,
-    country: 'United States',
-    hourlyRate: 45,
-    currency: 'USD',
-    specialties: ['UI/UX Design', 'Wireframing', 'Prototyping'],
-    description: 'Senior UI/UX designer with 8+ years of experience creating intuitive interfaces. Specialized in mobile apps and SaaS products.',
-    jobSuccess: 97,
-    projectsCompleted: 189,
-    lastActive: '2025-05-01T14:30:00Z',
-    verified: true,
-    topRated: true,
-    isFavorite: true
-  },
-  {
-    id: 2,
-    username: 'codemaster',
-    fullName: 'Sarah Chen',
-    profileImage: 'https://ui-avatars.com/api/?name=Sarah+Chen&background=0ea5e9&color=fff',
-    rating: 4.7,
-    reviews: 98,
-    country: 'Canada',
-    hourlyRate: 55,
-    currency: 'USD',
-    specialties: ['React', 'Node.js', 'Full Stack'],
-    description: 'Full stack developer with focus on React and Node.js. Love building sleek, scalable web applications with modern tooling.',
-    jobSuccess: 94,
-    projectsCompleted: 126,
-    lastActive: '2025-05-02T10:15:00Z',
-    verified: true,
-    topRated: false,
-    isFavorite: true
-  },
-  {
-    id: 3,
-    username: 'contentqueen',
-    fullName: 'Emma Johnson',
-    profileImage: 'https://ui-avatars.com/api/?name=Emma+Johnson&background=f59e0b&color=fff',
-    rating: 4.8,
-    reviews: 76,
-    country: 'United Kingdom',
-    hourlyRate: 35,
-    currency: 'GBP',
-    specialties: ['Content Writing', 'SEO', 'Copywriting'],
-    description: 'Content strategist and writer with expertise in SaaS, technology, and finance sectors. SEO-optimized content that drives traffic and conversions.',
-    jobSuccess: 98,
-    projectsCompleted: 153,
-    lastActive: '2025-05-01T18:45:00Z',
-    verified: true,
-    topRated: true,
-    isFavorite: true
-  },
-  {
-    id: 4,
-    username: 'devops_guru',
-    fullName: 'Michael Patel',
-    profileImage: 'https://ui-avatars.com/api/?name=Michael+Patel&background=10b981&color=fff',
-    rating: 4.9,
-    reviews: 112,
-    country: 'India',
-    hourlyRate: 40,
-    currency: 'USD',
-    specialties: ['DevOps', 'AWS', 'Docker'],
-    description: 'DevOps engineer specializing in cloud infrastructure, CI/CD pipelines, and container orchestration. AWS certified solutions architect.',
-    jobSuccess: 96,
-    projectsCompleted: 138,
-    lastActive: '2025-05-02T08:30:00Z',
-    verified: false,
-    topRated: true,
-    isFavorite: true
-  },
-  {
-    id: 5,
-    username: 'data_scientist',
-    fullName: 'Julia Kim',
-    profileImage: 'https://ui-avatars.com/api/?name=Julia+Kim&background=ec4899&color=fff',
-    rating: 4.6,
-    reviews: 89,
-    country: 'South Korea',
-    hourlyRate: 60,
-    currency: 'USD',
-    specialties: ['Data Science', 'Machine Learning', 'Python'],
-    description: 'Data scientist with experience in predictive modeling, NLP, and computer vision. Former researcher at Seoul National University.',
-    jobSuccess: 92,
-    projectsCompleted: 105,
-    lastActive: '2025-05-01T22:10:00Z',
-    verified: false,
-    topRated: false,
-    isFavorite: true
-  }
-];
+import axios from 'axios';
 
 // Helper functions
-const getCurrencySymbol = (currencyCode) => {
+const getCurrencySymbol = (currencyId) => {
   const symbols = {
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-    JPY: '¥',
-    AUD: 'A$',
-    CAD: 'C$',
-    INR: '₹',
-    CNY: '¥',
-    KRW: '₩',
-    BRL: 'R$',
+    1: '$', // USD
+    2: '€', // EUR
+    3: '£', // GBP
+    // Add more currency IDs as needed
   };
   
-  return symbols[currencyCode] || currencyCode;
+  return symbols[currencyId] || '$';
 };
 
-const getTimeAgo = (dateString) => {
-  const now = new Date();
-  const lastActive = new Date(dateString);
-  const diffMs = now - lastActive;
-  
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
-  if (diffMinutes < 60) {
-    return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-  } else if (diffHours < 24) {
-    return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-  } else {
-    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-  }
+const getFormattedDate = (dateString) => {
+  if (!dateString) return "Not specified";
+
+  const date = new Date(dateString);
+
+  const day = date.getDate(); // 1-31
+  const year = date.getFullYear(); // full year
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const monthName = monthNames[date.getMonth()];
+
+  const longFormat = ` - ${day}  ${monthName}, ${year}`; // e.g. 1, January, 2000
+
+  return longFormat;
+
 };
 
-// FreelancerCard Component - Modern design with advanced features
+
 const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
   const [expanded, setExpanded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  
+
   // Generate accent colors based on freelancer ID
   const getAccentColor = (id) => {
     const colors = [
@@ -157,11 +55,17 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
     return colors[id % colors.length];
   };
   
-  const accentColor = getAccentColor(freelancer.id);
+  const accentColor = getAccentColor(freelancer.userId);
   
+  // Calculate rating and reviews (using placeholder values since they're not in your data)
+  const rating = 4.5; // Default rating
+  const reviews = 10; // Default number of reviews
+  const jobSuccess = 90; // Default job success percentage
+  const projectsCompleted = 15; // Default projects completed
+
   return (
     <div 
-      className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 transform hover:scale-[1.01] relative flex flex-col md:flex-row "
+      className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 transform hover:scale-[1.01] relative flex flex-col md:flex-row"
       style={{
         boxShadow: isHovering 
           ? `0 20px 25px -5px ${accentColor.soft}, 0 10px 10px -5px ${accentColor.soft}` 
@@ -174,7 +78,7 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
       <button 
         onClick={(e) => {
           e.stopPropagation();
-          onToggleFavorite(freelancer.id);
+          onToggleFavorite(freelancer.userId);
         }}
         className={`absolute right-3 top-3 z-10 p-2 rounded-full shadow-sm ${
           freelancer.isFavorite ? 'bg-red-50 text-red-500 border border-red-200' : 'bg-white text-gray-400 border border-gray-200'
@@ -191,34 +95,30 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
           <div className="relative mb-2">
             <div className="h-16 w-16 rounded-full border-2 border-white overflow-hidden shadow-md">
               <img 
-                src={freelancer.profileImage} 
-                alt={freelancer.fullName} 
+                src={freelancer.profileImage?.imageUrl || 'https://ui-avatars.com/api/?name='+freelancer.firstName+'+'+freelancer.lastName} 
+                alt={`${freelancer.firstName} ${freelancer.lastName}`} 
                 className="w-full h-full object-cover"
               />
             </div>
             
-            {/* Badges */}
+            {/* Badges - using placeholder values */}
             <div className="absolute -bottom-1 -right-1 flex">
-              {freelancer.verified && (
-                <div className="bg-white rounded-full p-0.5 mr-1">
-                  <div className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    <Check className="h-2.5 w-2.5" />
-                  </div>
+              <div className="bg-white rounded-full p-0.5 mr-1">
+                <div className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  <Check className="h-2.5 w-2.5" />
                 </div>
-              )}
-              {freelancer.topRated && (
-                <div className="bg-white rounded-full p-0.5">
-                  <div className="bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    <Award className="h-2.5 w-2.5" />
-                  </div>
+              </div>
+              <div className="bg-white rounded-full p-0.5">
+                <div className="bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  <Award className="h-2.5 w-2.5" />
                 </div>
-              )}
+              </div>
             </div>
           </div>
           
           {/* User info */}
           <div className="text-gray-800 mb-2">
-            <h3 className="font-bold text-lg">{freelancer.fullName}</h3>
+            <h3 className="font-bold text-lg">{freelancer.firstName} {freelancer.lastName}</h3>
             <p className="text-gray-500 text-sm">@{freelancer.username}</p>
           </div>
           
@@ -226,13 +126,13 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
           <div className="flex items-center justify-center text-sm text-gray-600 mb-3">
             <div className="flex items-center">
               <Star className="h-4 w-4 text-amber-500 mr-1" />
-              <span className="font-medium mr-1">{freelancer.rating}</span>
-              <span className="mr-1">({freelancer.reviews})</span>
+              <span className="font-medium mr-1">{rating}</span>
+              <span className="mr-1">({reviews})</span>
             </div>
             <span className="mx-1">•</span>
             <div className="flex items-center">
               <MapPin className="h-4 w-4 mr-1" />
-              <span>{freelancer.country}</span>
+              <span>{freelancer.city || 'Location not specified'}</span>
             </div>
           </div>
         
@@ -240,19 +140,19 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
           <div className="w-full mb-2 bg-blue-50 rounded-lg p-3 border border-blue-100">
             <p className="text-sm text-blue-600 font-medium uppercase tracking-wide">Hourly Rate</p>
             <p className="text-2xl font-bold text-gray-800">
-              {getCurrencySymbol(freelancer.currency)}{freelancer.hourlyRate}
-              <span className="text-sm text-gray-500 ml-1">{freelancer.currency}</span>
+              {getCurrencySymbol(freelancer.currencyId)}{freelancer.hourlyRate}
+              <span className="text-sm text-gray-500 ml-1">USD</span>
             </p>
             
             <div className="mt-2">
               <div className="flex justify-between items-center text-sm text-gray-700 mb-1">
                 <span>Success Rate</span>
-                <span className="font-medium">{freelancer.jobSuccess}%</span>
+                <span className="font-medium">{jobSuccess}%</span>
               </div>
               <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div 
                   className="bg-blue-500"
-                  style={{ width: `${freelancer.jobSuccess}%`, height: '100%' }}
+                  style={{ width: `${jobSuccess}%`, height: '100%' }}
                 ></div>
               </div>
             </div>
@@ -264,16 +164,11 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
       <div className="p-4 md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-gray-100">
         {/* Specialties */}
         <div className="mb-3">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">Specialties</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">Professional Title</h4>
           <div className="flex flex-wrap gap-2 mb-3">
-            {freelancer.specialties.map((specialty, index) => (
-              <span 
-                key={index} 
-                className="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full font-medium"
-              >
-                {specialty}
-              </span>
-            ))}
+            <span className="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full font-medium">
+              {freelancer.professionalTitle || 'Developer'}
+            </span>
           </div>
         </div>
         
@@ -281,10 +176,10 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
         <div className="mb-3">
           <h4 className="text-sm font-semibold text-gray-700 mb-2">About</h4>
           <p className={`text-sm text-gray-700 leading-relaxed ${expanded ? '' : 'line-clamp-2'}`}>
-            {freelancer.description}
+            {freelancer.profile?.profileDescription || 'No description provided.'}
           </p>
           
-          {freelancer.description.length > 100 && (
+          {freelancer.profile?.profileDescription?.length > 100 && (
             <button 
               onClick={() => setExpanded(!expanded)} 
               className="text-sm text-blue-600 hover:text-blue-800 mt-2 font-medium"
@@ -298,11 +193,11 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
         <div className="flex items-center mt-auto space-x-4 text-sm text-gray-700">
           <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-lg">
             <Briefcase className="h-4 w-4 mr-2 text-blue-500" />
-            <span className="font-medium">{freelancer.projectsCompleted} projects</span>
+            <span className="font-medium">{projectsCompleted} projects</span>
           </div>
           <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-lg">
             <Clock className="h-4 w-4 mr-2 text-blue-500" />
-            <span className="font-medium">Active {getTimeAgo(freelancer.lastActive)}</span>
+            <span className="font-medium">Joined {getFormattedDate(freelancer.createdAt[0])}</span>
           </div>
         </div>
       </div>
@@ -312,13 +207,13 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
         <div className="w-full flex flex-col gap-2">
           <button 
             className="w-full bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 py-2 px-3 rounded-lg flex items-center justify-center transition-colors text-sm font-medium"
-            onClick={() => window.location.href = `/freelancer/${freelancer.id}`}
+            onClick={() => window.location.href = `/profile/${freelancer.userId}`}
           >
             <User className="h-4 w-4 mr-2 text-blue-500" /> View Profile
           </button>
           <button 
             className="w-full bg-blue-600 text-white hover:bg-blue-700 py-2 px-3 rounded-lg flex items-center justify-center transition-colors text-sm font-medium shadow-sm"
-            onClick={() => onHire(freelancer.id)}
+            onClick={() => onHire(freelancer.userId)}
           >
             <MessageSquare className="h-4 w-4 mr-2" /> Hire Now
           </button>
@@ -328,7 +223,7 @@ const FreelancerCard = ({ freelancer, onToggleFavorite, onHire }) => {
   );
 };
 
-// FreelancerFilters Component
+// FreelancerFilters Component (unchanged from your original)
 const FreelancerFilters = ({ 
   searchValue, 
   onSearchChange, 
@@ -633,30 +528,66 @@ const FreelancerFilters = ({
   );
 };
 
-// Main FavoriteFreelancersGrid component
+// Main FavoriteFreelancersGrid component - Updated for new data structure
 const FavoriteFreelancersGrid = () => {
-  const [freelancers, setFreelancers] = useState(sampleFreelancers);
-  const [filteredFreelancers, setFilteredFreelancers] = useState(sampleFreelancers);
+  const [freelancers, setFreelancers] = useState([]);
+  const [filteredFreelancers, setFilteredFreelancers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('rating');
   const [selectedSpecialties, setSelectedSpecialties] = useState([]);
   const [rateRange, setRateRange] = useState({ min: 0, max: 100 });
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 10;
+  const [loading, setLoading] = useState(true);
   
+  useEffect(() => {
+    const fetchFavoriteFreelancers = async () => {
+      try {
+        setLoading(true);
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        if (!userData || !userData.userId) {
+          console.error('User data not found in localStorage');
+          return;
+        }
+        
+        const userId = Array.isArray(userData.userId) ? userData.userId[0] : userData.userId;
+        const res = await axios.get(`/api/users/favourite/${userId}`);
+        
+        if (res.data.users) {
+          // Add isFavorite flag to each freelancer
+          const freelancersWithFavoriteFlag = res.data.users.map(f => ({
+            ...f,
+            isFavorite: true // Since these are all favorites from the API
+          }));
+          
+          setFreelancers(freelancersWithFavoriteFlag);
+          setFilteredFreelancers(freelancersWithFavoriteFlag);
+        }
+      } catch (error) {
+        console.error('Error fetching favorite freelancers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFavoriteFreelancers();
+  }, []);
+
   // Effect to filter and sort freelancers
   useEffect(() => {
+    if (freelancers.length === 0) return;
+    
     let result = [...freelancers].filter(f => f.isFavorite);
     
     // Apply search filter if query exists
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(f => 
-        f.fullName.toLowerCase().includes(query) || 
+        `${f.firstName} ${f.lastName}`.toLowerCase().includes(query) || 
         f.username.toLowerCase().includes(query) ||
-        f.country.toLowerCase().includes(query) ||
-        f.specialties.some(s => s.toLowerCase().includes(query))
+        (f.city && f.city.toLowerCase().includes(query)) ||
+        (f.professionalTitle && f.professionalTitle.toLowerCase().includes(query)) ||
+        (f.profile?.profileDescription && f.profile.profileDescription.toLowerCase().includes(query))
       );
     }
     
@@ -670,23 +601,27 @@ const FavoriteFreelancersGrid = () => {
     // Apply specialties filter
     if (selectedSpecialties.length > 0) {
       result = result.filter(f => 
-        f.specialties.some(s => selectedSpecialties.includes(s))
+        f.professionalTitle && selectedSpecialties.some(s => 
+          f.professionalTitle.toLowerCase().includes(s.toLowerCase())
+        )
       );
     }
     
     // Apply sorting
     switch (sortOption) {
       case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
+        // Using placeholder rating since it's not in your data
+        result.sort((a, b) => (b.rating || 4.5) - (a.rating || 4.5));
         break;
       case 'hourlyRate':
         result.sort((a, b) => a.hourlyRate - b.hourlyRate);
         break;
       case 'reviews':
-        result.sort((a, b) => b.reviews - a.reviews);
+        // Using placeholder reviews count
+        result.sort((a, b) => (b.reviews || 10) - (a.reviews || 10));
         break;
       case 'lastActive':
-        result.sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive));
+        result.sort((a, b) => new Date(b.createdAt[0]) - new Date(a.createdAt[0]));
         break;
       default:
         break;
@@ -695,102 +630,38 @@ const FavoriteFreelancersGrid = () => {
     // Reset to page 1 when filters or sort changes
     setCurrentPage(1);
     setFilteredFreelancers(result);
-    
-    // Log active filters for debugging
-    console.log('Active filters:', { 
-      searchQuery: searchQuery ? 'set' : 'empty', 
-      rateRange, 
-      specialties: selectedSpecialties.length, 
-      totalResults: result.length
-    });
   }, [freelancers, searchQuery, sortOption, rateRange, selectedSpecialties]);
   
   // Handle toggling favorites
-  const handleToggleFavorite = (id) => {
-    setFreelancers(freelancers.map(f => 
-      f.id === id ? { ...f, isFavorite: !f.isFavorite } : f
-    ));
+  const handleToggleFavorite = async (userId) => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('userData'));
+      if (!userData || !userData.userId) {
+        console.error('User data not found in localStorage');
+        return;
+      }
+      
+      const currentUserId = Array.isArray(userData.userId) ? userData.userId[0] : userData.userId[0];
+      
+      // Call API to remove from favorites
+      const res = await axios.delete(`/api/favourite/${currentUserId}/${userId}`);
+      
+      if(res.data.success){
+
+        // Update local state
+        setFreelancers(freelancers.filter(f => f.userId !== userId));
+        setFilteredFreelancers(filteredFreelancers.filter(f => f.userId !== userId));
+      }
+      
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
   };
   
   // Handle hiring a freelancer
-  const handleHire = (id) => {
-    // This would typically open a chat or create a job offer
-    console.log(`Opening hire dialog for freelancer ${id}`);
-    alert(`You're about to hire freelancer with ID ${id}`);
-  };
-  
-  // Handle search
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-  };
-  
-  // Handle filter change
-  const handleFilterChange = () => {
-    // Filter freelancers based on rate range and specialties
-    let result = [...freelancers].filter(f => f.isFavorite);
-    
-    // Apply rate range filter
-    if (rateRange.min > 0 || rateRange.max < 100) {
-      result = result.filter(f => 
-        f.hourlyRate >= rateRange.min && f.hourlyRate <= rateRange.max
-      );
-    }
-    
-    // Apply specialties filter
-    if (selectedSpecialties.length > 0) {
-      result = result.filter(f => 
-        f.specialties.some(s => selectedSpecialties.includes(s))
-      );
-    }
-    
-    console.log('Applying filters', { rateRange, selectedSpecialties });
-    setFilteredFreelancers(result);
-  };
-  
-  // Clear all filters
-  const handleClearAllFilters = () => {
-    setSearchQuery('');
-    setSortOption('rating');
-    setSelectedSpecialties([]);
-    setRateRange({ min: 0, max: 100 });
-    
-    // Reset to show all favorited freelancers with no filters
-    const allFavorites = [...freelancers].filter(f => f.isFavorite);
-    console.log('Clearing all filters, showing all favorites:', allFavorites.length);
-    setFilteredFreelancers(allFavorites);
-  };
-  
-  // Handle sort change
-  const handleSortChange = (option) => {
-    setSortOption(option);
-  };
-  
-  // Handle specialties change
-  const handleSpecialtiesChange = (specialties) => {
-    setSelectedSpecialties(specialties);
-  };
-  
-  // Handle rate range change
-  const handleRateRangeChange = (range) => {
-    setRateRange(range);
-  };
-  
-  // Pagination functions
-  const handleNextPage = () => {
-    const totalPages = Math.ceil(filteredFreelancers.length / postsPerPage);
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-  
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-  
-  const handlePageClick = (page) => {
-    setCurrentPage(page);
+  const handleHire = (userId) => {
+    console.log(`Opening hire dialog for freelancer ${userId}`);
+    alert(`You're about to hire freelancer with ID ${userId}`);
   };
   
   // Empty state component when no freelancers are found
@@ -803,13 +674,18 @@ const FavoriteFreelancersGrid = () => {
       <p className="text-gray-500 mb-4">You haven't added any freelancers to your favorites list yet, or none match your current filters.</p>
       <div className="flex justify-center gap-4">
         <button 
-          onClick={handleClearAllFilters}
+          onClick={() => {
+            setSearchQuery('');
+            setSortOption('rating');
+            setSelectedSpecialties([]);
+            setRateRange({ min: 0, max: 100 });
+          }}
           className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
         >
           Clear filters
         </button>
         <button 
-          onClick={() => window.location.href = '/search'}
+          onClick={() => window.location.href = '/freelancers'}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
         >
           Find freelancers
@@ -818,8 +694,21 @@ const FavoriteFreelancersGrid = () => {
     </div>
   );
   
+  // Loading state
+  if (loading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
-    <div className="p-6 bg-gray-50 min-h-screen bg-gray-200">
+    <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -834,15 +723,20 @@ const FavoriteFreelancersGrid = () => {
           <div className="w-full lg:w-1/4">
             <FreelancerFilters 
               searchValue={searchQuery}
-              onSearchChange={handleSearch}
-              onFilterChange={handleFilterChange}
-              onSortChange={handleSortChange}
+              onSearchChange={setSearchQuery}
+              onFilterChange={() => {}} // Not needed since we use useEffect
+              onSortChange={setSortOption}
               selectedSort={sortOption}
               selectedSpecialties={selectedSpecialties}
-              onSpecialtiesChange={handleSpecialtiesChange}
+              onSpecialtiesChange={setSelectedSpecialties}
               rateRange={rateRange}
-              onRateRangeChange={handleRateRangeChange}
-              onClearAll={handleClearAllFilters}
+              onRateRangeChange={setRateRange}
+              onClearAll={() => {
+                setSearchQuery('');
+                setSortOption('rating');
+                setSelectedSpecialties([]);
+                setRateRange({ min: 0, max: 100 });
+              }}
             />
             
             {/* Stats Card */}
@@ -854,7 +748,7 @@ const FavoriteFreelancersGrid = () => {
                     <Heart className="h-4 w-4 mr-2 text-red-500" /> In Favorites
                   </span>
                   <span className="text-sm font-semibold text-gray-800">
-                    {freelancers.filter(f => f.isFavorite).length}
+                    {freelancers.length}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -862,27 +756,18 @@ const FavoriteFreelancersGrid = () => {
                     <Shield className="h-4 w-4 mr-2 text-blue-500" /> Verified
                   </span>
                   <span className="text-sm font-semibold text-gray-800">
-                    {freelancers.filter(f => f.verified && f.isFavorite).length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 flex items-center">
-                    <Award className="h-4 w-4 mr-2 text-amber-500" /> Top Rated
-                  </span>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {freelancers.filter(f => f.topRated && f.isFavorite).length}
+                    {freelancers.filter(f => f.verified).length}
                   </span>
                 </div>
                 <div className="pt-2 border-t border-gray-100">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Avg. Hourly Rate</span>
                     <span className="text-sm font-semibold text-gray-800">
-                      ${Math.round(
-                        freelancers
-                          .filter(f => f.isFavorite)
-                          .reduce((sum, f) => sum + f.hourlyRate, 0) / 
-                        freelancers.filter(f => f.isFavorite).length
-                      )}
+                      ${freelancers.length > 0 ? 
+                        Math.round(
+                          freelancers.reduce((sum, f) => sum + f.hourlyRate, 0) / 
+                          freelancers.length
+                        ) : 0}
                     </span>
                   </div>
                 </div>
@@ -890,16 +775,15 @@ const FavoriteFreelancersGrid = () => {
             </div>
           </div>
           
-          {/* Freelancer Grid - One post per row */}
+          {/* Freelancer Grid */}
           <div className="w-full lg:w-3/4">
             {filteredFreelancers.length > 0 ? (
               <div className="space-y-6">
-                {/* Calculate current posts to display */}
                 {filteredFreelancers
                   .slice((currentPage - 1) * postsPerPage, currentPage * postsPerPage)
                   .map(freelancer => (
                     <FreelancerCard 
-                      key={freelancer.id}
+                      key={freelancer.userId}
                       freelancer={freelancer}
                       onToggleFavorite={handleToggleFavorite}
                       onHire={handleHire}
@@ -916,7 +800,6 @@ const FavoriteFreelancersGrid = () => {
                 {/* Show posts count */}
                 <div className="text-sm text-gray-600 mb-4">
                   Showing {
-                    // If on the last page, may show fewer than postsPerPage
                     currentPage * postsPerPage > filteredFreelancers.length 
                       ? filteredFreelancers.length - ((currentPage - 1) * postsPerPage) 
                       : postsPerPage
@@ -928,7 +811,7 @@ const FavoriteFreelancersGrid = () => {
                 
                 <nav className="flex flex-wrap items-center justify-center">
                   <button 
-                    onClick={handlePrevPage}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
                     className={`px-3 py-1 rounded mr-1 ${
                       currentPage === 1 
@@ -941,15 +824,14 @@ const FavoriteFreelancersGrid = () => {
                   
                   {/* Generate page buttons */}
                   {Array.from({ length: Math.min(5, Math.ceil(filteredFreelancers.length / postsPerPage)) }, (_, i) => {
-                    // Create simple pagination for first 5 pages
                     const pageNum = i + 1;
                     return (
                       <button 
                         key={pageNum}
-                        onClick={() => handlePageClick(pageNum)}
+                        onClick={() => setCurrentPage(pageNum                        )}
                         className={`px-3 py-1 rounded mx-1 ${
                           currentPage === pageNum
-                            ? 'bg-blue-600 text-white' 
+                            ? 'bg-blue-600 text-white'
                             : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
                         }`}
                       >
@@ -958,20 +840,13 @@ const FavoriteFreelancersGrid = () => {
                     );
                   })}
                   
+                  {/* Ellipsis for many pages */}
                   {Math.ceil(filteredFreelancers.length / postsPerPage) > 5 && (
-                    <>
-                      <span className="px-2 text-gray-500 mx-1">...</span>
-                      <button 
-                        onClick={() => handlePageClick(Math.ceil(filteredFreelancers.length / postsPerPage))}
-                        className="px-3 py-1 rounded mx-1 bg-white border border-gray-300 text-gray-600 hover:bg-gray-50"
-                      >
-                        {Math.ceil(filteredFreelancers.length / postsPerPage)}
-                      </button>
-                    </>
+                    <span className="px-2 py-1">...</span>
                   )}
                   
                   <button 
-                    onClick={handleNextPage}
+                    onClick={() => setCurrentPage(p => Math.min(p + 1, Math.ceil(filteredFreelancers.length / postsPerPage)))}
                     disabled={currentPage === Math.ceil(filteredFreelancers.length / postsPerPage)}
                     className={`px-3 py-1 rounded ml-1 ${
                       currentPage === Math.ceil(filteredFreelancers.length / postsPerPage)

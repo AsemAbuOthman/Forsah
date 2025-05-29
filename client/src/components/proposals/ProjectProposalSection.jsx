@@ -52,6 +52,7 @@ const reactTabsStyles = `
  * @param {string} props.apiUrl - Base API URL for proposals endpoints
  * @returns {JSX.Element} - Rendered component
  */
+
 const ProjectProposalSection = ({ 
   project, 
   freelancerId, 
@@ -66,134 +67,6 @@ const ProjectProposalSection = ({
   const [hasSubmittedProposal, setHasSubmittedProposal] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Demo data for the proposals list
-  const demoProposals = [
-    {
-      id: 1001,
-      projectId: project?.id,
-      freelancerId: 789,
-      bidAmount: 350,
-      estimatedDeliveryTime: "2023-06-15",
-      coverLetter: "Hello! I'm very experienced with Excel formulas and VBA. I've worked on many financial spreadsheets that deal with fiscal year calculations. I can fix your issue with the date formulas and ensure they account for the fiscal year differences correctly.\n\nI've attached some examples of similar work I've done in the past. I would approach this by first analyzing your current formulas, understanding the fiscal year requirements, and then implementing a solution that's both accurate and easy to maintain.\n\nLooking forward to working with you!",
-      createdAt: new Date().toISOString(),
-      proposalStateId: 1,
-      freelancer: {
-        id: 789,
-        name: "John Smith",
-        avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-        location: "New York, USA",
-        country: "United States",
-        city: "New York",
-        joinedDate: new Date("2021-06-15").toISOString(),
-        rating: 4.8,
-        totalReviews: 57,
-        totalEarned: 12500,
-        projectsCompleted: 23,
-        bio: "I'm a financial data analyst with over 5 years of experience in Excel, VBA, and data visualization. I specialize in building automated financial reports and dashboards for businesses.",
-        skills: ["Excel", "VBA", "Python", "Financial Analysis", "Data Visualization", "SQL", "Power BI"]
-      }
-    },
-    {
-      id: 1002,
-      projectId: project?.id,
-      freelancerId: 790,
-      bidAmount: 275,
-      estimatedDeliveryTime: "2023-06-10",
-      coverLetter: "I have extensive experience working with Excel formulas and fiscal year calculations. I can help you adjust your formulas to properly account for fiscal year differences.\n\nMy approach would be to first understand your specific fiscal year requirements, then analyze the current formulas that are causing issues. I would then implement a solution that ensures accurate date calculations regardless of fiscal year boundaries.\n\nI've successfully completed similar projects in the past for accounting firms and financial departments. I'm confident I can deliver a clean and efficient solution for your needs.",
-      createdAt: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-      proposalStateId: 1,
-      freelancer: {
-        id: 790,
-        name: "Emily Johnson",
-        avatar: "https://randomuser.me/api/portraits/women/2.jpg",
-        location: "Chicago, USA",
-        country: "United States",
-        city: "Chicago",
-        joinedDate: new Date("2020-03-10").toISOString(),
-        rating: 4.9,
-        totalReviews: 84,
-        totalEarned: 18750,
-        projectsCompleted: 36,
-        bio: "Excel and financial data expert with a background in accounting. I help businesses streamline their financial reporting processes and fix complex spreadsheet issues.",
-        skills: ["Excel", "Financial Reporting", "VBA", "Accounting", "Data Analysis", "QuickBooks", "Financial Modeling"]
-      }
-    },
-    {
-      id: 1003,
-      projectId: project?.id,
-      freelancerId: 791,
-      bidAmount: 425,
-      estimatedDeliveryTime: "2023-06-20",
-      coverLetter: "Hello there! I specialize in complex Excel formula development and optimization, particularly for financial applications. Your project caught my attention because I've worked on several similar fiscal year calculation issues.\n\nI have a strong background in financial spreadsheet development and can help ensure your date formulas properly account for fiscal year boundaries. I would approach this by implementing robust formulas that handle edge cases and maintain accuracy regardless of the date range.\n\nI can also provide documentation and explanations for the solution so you understand how it works and can maintain it in the future.",
-      createdAt: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString(),
-      proposalStateId: 1,
-      freelancer: {
-        id: 791,
-        name: "Michael Chen",
-        avatar: "https://randomuser.me/api/portraits/men/3.jpg",
-        location: "San Francisco, USA",
-        country: "United States",
-        city: "San Francisco",
-        joinedDate: new Date("2019-11-05").toISOString(),
-        rating: 4.7,
-        totalReviews: 42,
-        totalEarned: 22300,
-        projectsCompleted: 28,
-        bio: "Former financial analyst turned freelance Excel consultant. I help businesses solve complex spreadsheet problems and develop automated reporting solutions.",
-        skills: ["Excel", "VBA", "Financial Analysis", "Data Modeling", "Power Query", "Power BI", "Macros"]
-      }
-    },
-    {
-      id: 1004,
-      projectId: project?.id,
-      freelancerId: 792,
-      bidAmount: 325,
-      estimatedDeliveryTime: "2023-06-12",
-      coverLetter: "I noticed your project requires expertise in Excel date formulas and fiscal year calculations. This is exactly my area of expertise, as I've worked extensively with financial institutions that operate on varied fiscal calendars.\n\nMy background in accounting software development gives me a unique perspective on handling date calculations in Excel. I can analyze your current formulas, identify the issues, and implement solutions that account for all fiscal year peculiarities.\n\nI'm confident I can deliver an accurate, efficient solution within your timeline and budget.",
-      createdAt: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
-      proposalStateId: 1,
-      freelancer: {
-        id: 792,
-        name: "Priya Sharma",
-        avatar: "https://randomuser.me/api/portraits/women/4.jpg",
-        location: "Bangalore, India",
-        country: "India",
-        city: "Bangalore",
-        joinedDate: new Date("2022-01-15").toISOString(),
-        rating: 4.6,
-        totalReviews: 29,
-        totalEarned: 9800,
-        projectsCompleted: 17,
-        bio: "Financial software developer with a passion for building efficient, user-friendly Excel solutions. I specialize in automating financial processes and solving complex calculation issues.",
-        skills: ["Excel", "VBA", "Financial Software", "Data Analysis", "Automation", "Power BI", "Financial Reporting"]
-      }
-    },
-    {
-      id: 1005,
-      projectId: project?.id,
-      freelancerId: 793,
-      bidAmount: 380,
-      estimatedDeliveryTime: "2023-06-18",
-      coverLetter: "As a former accountant who now specializes in Excel development, I understand both the financial concepts and technical aspects of your project. I've helped several clients solve similar fiscal year calculation issues in Excel.\n\nI would start by examining your current formulas and understanding the specific fiscal year requirements that need to be addressed. Then, I would develop and implement a robust solution that not only fixes the current issues but is also flexible enough to accommodate any future changes in your fiscal year structure.\n\nI pride myself on delivering solutions that are not just technically sound but also easy for non-technical users to understand and maintain.",
-      createdAt: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(),
-      proposalStateId: 1,
-      freelancer: {
-        id: 793,
-        name: "David Wilson",
-        avatar: "https://randomuser.me/api/portraits/men/5.jpg",
-        location: "London, UK",
-        country: "United Kingdom",
-        city: "London",
-        joinedDate: new Date("2019-05-22").toISOString(),
-        rating: 4.9,
-        totalReviews: 68,
-        totalEarned: 25400,
-        projectsCompleted: 42,
-        bio: "Certified accountant turned Excel specialist. I combine financial expertise with technical skills to create powerful spreadsheet solutions for complex business needs.",
-        skills: ["Excel", "Accounting", "Financial Modeling", "VBA", "Data Analysis", "XERO", "QuickBooks"]
-      }
-    }
-  ];
 
   // Fetch proposals for the project
   useEffect(() => {
@@ -206,7 +79,6 @@ const ProjectProposalSection = ({
         // const response = await axios.get(`${apiUrl}?projectId=${project.id}`);
         // setProposals(response.data || []);
         
-        // For demo purposes, use the demo data
         setTimeout(() => {
           // Update project ID in demo data to match current project
           const updatedProposals = demoProposals.map(proposal => ({

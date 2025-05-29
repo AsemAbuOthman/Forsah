@@ -104,6 +104,12 @@ const MessagingPage = () => {
     }
   }, [activeContact?.id]);
 
+  useEffect(() => {
+    if (messagesListRef.current) {
+      messagesListRef.current.scrollTop = messagesListRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   // API Functions
   const fetchContacts = async () => {
     try {
@@ -386,25 +392,25 @@ const MessagingPage = () => {
 
   const handleInputChange = (value) => {
     setInputValue(value);
-    
+  
     if (isConnected && activeContact) {
-      clearTimeout(typingTimeoutRef.current);
-      
+      // Send "typing" event
       sendMessage('typing', {
         senderId: userData.userId[0],
-        receiverId: activeContact.id,
-        isTyping: value.trim() !== ''
+        receiverId: activeContact.id
       });
-      
+  
+      // Reset typing status after timeout
+      clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        sendMessage('typing', {
+        sendMessage('stop_typing', {
           senderId: userData.userId[0],
-          receiverId: activeContact.id,
-          isTyping: false
+          receiverId: activeContact.id
         });
-      }, 2000);
+      }, 2000); // 2 seconds of inactivity ends typing status
     }
   };
+  
 
   const handleReplyMessage = (message) => {
     setReplyingTo(message);

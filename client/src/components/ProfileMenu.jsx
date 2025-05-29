@@ -9,16 +9,15 @@ export default function ProfileMenu() {
         { name: "Profile", icon: "bi bi-person-vcard", link: "/dashboard/Profile" },
         { name: "Account analytics", icon: "bi bi-bar-chart-line", link: "/dashboard/account_analytics" },
         { name: "Settings", icon: "bi bi-gear", link: "/dashboard/Settings" },
-        { name: "Withdraw funds", icon: "bi bi-wallet", link: "/dashboard/Withdraw funds" },
-        { name: "Transaction history", icon: "bi bi-clock-history", link: "/dashboard/Transaction history" },
+        { name: "Transaction history", icon: "bi bi-clock-history", link: "/dashboard/transaction_history" },
         { name: "Financial dashboard", icon: "bi bi-pie-chart", link: "/dashboard/Financial dashboard" },
         { name: "Support", icon: "bi bi-question-square", link: "/dashboard/Support" },
-        { name: "Logout", icon: "bi bi-box-arrow-left", link: "/dashboard/Logout" },
+        { name: "Logout", icon: "bi bi-box-arrow-left", link: "/dashboard/Logout" }
     ];
 
     return (
         <>
-            <nav className="md:flex items-start justify-center starting:translate-y-10 starting:scale-90 transition duration-300 ease-in-out z-100 max-h-screen w-fit m-0 py-5  absolute bg-transparent shadow-xs ">
+            <nav className="md:flex items-start justify-center starting:translate-y-10 starting:scale-90 transition duration-300 ease-in-out z-100 max-h-screen w-fit m-0 py-7  absolute bg-transparent shadow-xs ">
                 <div className="bg-white w-70 px-2 h-full md:flex justify-around flex-wrap overflow-auto gap-10 py-5 rounded-2xl  shadow-xl ">
                     <div className="text-primary  w-full flex items-center justify-center space-x-3 hover:bg-accent hover:bg-opacity-10 rounded-md p-2 transition duration-200">
                         <GeneralList  items={menuOptions} isWithImg={true} isWithTitle={false}/>
