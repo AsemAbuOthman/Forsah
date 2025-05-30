@@ -5,7 +5,7 @@ const url = require('url');
 const path = require('path');
 const querystring = require('querystring');
 const getRawBody = require('raw-body');
-const stripe = require('stripe')('sk_test_51RNvo0PD2ZfT0veAYBYuNgQPFMaEfh6KumEjPtElMhNnrxYsfMkoL3nU1DgSMZwtoiZei11cZEjEgBhcbxJ3SApD00aTqvb9d1');
+// const stripe = require('stripe')('ska_test_51RNvo0PD2ZfT0veAYBYuNgQPFMaEfh6KumEjPtElMhNnrxYsfMkoL3nU1DgSMZwtoiZei11cZEjEgBhcbxJ3SApD00aTqvb9d1');
 
 
 const { 
