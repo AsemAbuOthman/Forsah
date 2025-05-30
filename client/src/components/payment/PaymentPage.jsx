@@ -7,62 +7,120 @@ import PaymentForm from './PaymentForm';
 import PaypalPayment from './PaypalPayment';
 import OrderSummary from './OrderSummary';
 import PaymentSuccess from './PaymentSuccess';
-import { storage } from '../../services/Firebase'; // Assuming you have firebase config setup
+import { storage } from '../../services/Firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
-import { generatePDF } from './pdfGenerator'; // We'll create this function
+import { generatePDF } from './pdfGenerator';
 import axios from 'axios';
+import toast from 'react-hot-toast';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const stripePromise = loadStripe('pk_test_51RNvo0PD2ZfT0veA7BPxByjFh4BdGorb1kDLEX9KSBv7pQcivh7c1JK0VLQfGQwfLwwy5VcgGtYWeL0S04uHqAPj00IeRkq5Sn');
 
-const PaymentPage = ({ userId, projectId }) => {
+const PaymentPage = () => {
+  const location = useLocation();
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState('idle');
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [clientSecret, setClientSecret] = useState('');
   const [stripeError, setStripeError] = useState(null);
+
+  const navigate = useNavigate();
+  
+  // Extract state from location
+  const { userId, projectId, proposalData } = location.state || {};
+
+  console.log('userId : ', userId);
+  console.log('projectId : ', projectId);
+  console.log('proposalData : ', proposalData);
+
+  // Redirect if state is missing
+  useEffect(() => {
+    if (!userId || !projectId) {
+      toast.error('Missing payment information');
+      navigate('/projects');
+    }
+  }, [userId, projectId, navigate]);
+
   const [orderData, setOrderData] = useState({
     items: [
-      { id: 1, name: 'Premium Plan Subscription', price: 49.99, quantity: 1 },
-      { id: 2, name: 'One-time Setup Fee', price: 10.00, quantity: 1 },
+      { 
+        id: 1, 
+        name: proposalData?.projectTitle || 'Service Payment', 
+        description: proposalData?.proposalDescription || 'Payment for services rendered',
+        price: proposalData?.proposalAmount
+        || 0, 
+        quantity: 1 
+      },
+      { 
+        id: 2, 
+        name: 'Service Fee', 
+        price: (0.025 * proposalData?.proposalAmount), 
+        quantity: 1 
+      }
     ],
-    subtotal: 59.99,
-    tax: 0.025,
-    total: 65.98,
-    projectId: projectId,
-    userId: userId,
+    subtotal: (proposalData?.proposalAmount || 0) + (0.025 * proposalData?.proposalAmount),
+    tax: 0.025, // 2.5% tax
+    total: ((proposalData?.proposalAmount || 0) + 0.025) * 1.025,
+    projectId,
+    userId,
     createdAt: new Date().toISOString(),
   });
+
+  // Update order data when proposalData changes
+  useEffect(() => {
+    if (proposalData) {
+      setOrderData(prev => ({
+        ...prev,
+        items: [
+          { 
+            id: 1, 
+            name: proposalData.projectTitle, 
+            proposalDescription: proposalData.proposalDescription,
+            price: proposalData.proposalAmount, 
+            quantity: 1 
+          },
+          { 
+            id: 2, 
+            name: 'Service Fee', 
+            price: 0.025 , 
+            quantity: 1 
+          }
+        ],
+        subtotal: proposalData.proposalAmount + (0.025 ),
+        total: (proposalData.proposalAmount + (0.025 )) * 1.025
+      }));
+    }
+  }, [proposalData]);
 
   useEffect(() => {
     if (paymentMethod === 'credit-card') {
       createPaymentIntent();
     }
-  }, [paymentMethod]);
+  }, [paymentMethod, orderData.total]);
 
   const createPaymentIntent = async () => {
     try {
-      
       const response = await axios.post('/api/create-payment-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: Math.round(orderData.total * 100),
-          currency: 'usd',
-          metadata: {
-            userId: userId,
-            projectId: projectId,
-          }
-        }),
+        amount: Math.round(orderData.total * 100),
+        currency: 'usd',
+        metadata: { 
+          userId, 
+          projectId,
+          proposalId: proposalData?.proposalId
+        }
       });
 
-      const data = await response.json();
-      setClientSecret(data.clientSecret);
+      if (response.data?.clientSecret) {
+        setClientSecret(response.data.clientSecret);
+      } else {
+        throw new Error('Invalid client secret received from server.');
+      }
+
     } catch (err) {
       console.error('Error creating payment intent:', err);
-      setStripeError('Failed to initialize payment. Please try again.');
+      setStripeError(err.response?.data?.error || 'Failed to initialize payment. Please try again.');
+      toast.error('Failed to initialize payment');
     }
   };
 
@@ -73,47 +131,65 @@ const PaymentPage = ({ userId, projectId }) => {
 
   const generateAndUploadBill = async (paymentDetails) => {
     try {
-      // Generate PDF content
       const pdfContent = await generatePDF({
         ...orderData,
         paymentDetails,
         paymentDate: new Date().toISOString(),
+        proposalData
       });
 
-      // Create a reference to the storage location
       const billId = uuidv4();
-      const storageRef = ref(storage, `bills/${billId}.pdf`);
-      
-      // Upload the PDF
+      const storageRef = ref(storage, `bills/${userId}/${billId}.pdf`);
       await uploadBytes(storageRef, pdfContent);
-      
-      // Get the download URL
       const downloadURL = await getDownloadURL(storageRef);
-      
       return downloadURL;
     } catch (error) {
       console.error('Error generating or uploading bill:', error);
+      toast.error('Failed to generate receipt');
+      throw error;
+    }
+  };
+
+  const submitPaymentDetails = async (details) => {
+    try {
+      const res = await axios.post(`/api/payment/`, {
+        userId,
+        projectId,
+        proposalId: proposalData?.proposalId,
+        paymentDetails: details,
+        orderData
+      });
+
+      if (res.data.success) {
+        toast.success('Payment recorded successfully!');
+      } else {
+        throw new Error(res.data.message || 'Payment recording failed');
+      }
+
+    } catch (error) {
+      console.error('Failed to record payment:', error);
+      toast.error('Failed to record payment');
       throw error;
     }
   };
 
   const handlePaymentSubmit = async (details) => {
     setPaymentStatus('processing');
-    
     try {
-      // In a real app, you would verify the payment with your backend first
       const billUrl = await generateAndUploadBill({
         ...details,
         method: 'paypal',
       });
 
-      setPaymentDetails({
+      const fullDetails = {
         ...details,
         method: 'paypal',
         billUrl,
         transactionId: details.orderID,
-      });
-      
+      };
+
+      setPaymentDetails(fullDetails);
+      await submitPaymentDetails(fullDetails);
       setPaymentStatus('success');
     } catch (error) {
       console.error('Payment processing failed:', error);
@@ -124,7 +200,6 @@ const PaymentPage = ({ userId, projectId }) => {
 
   const handleStripePaymentSuccess = async (paymentResult) => {
     setPaymentStatus('processing');
-    
     try {
       const billUrl = await generateAndUploadBill({
         method: 'credit-card',
@@ -132,13 +207,16 @@ const PaymentPage = ({ userId, projectId }) => {
         transactionId: paymentResult.paymentIntent.id,
       });
 
-      setPaymentDetails({
+      const fullDetails = {
         method: 'credit-card',
         cardLast4: paymentResult.paymentMethod.card.last4,
         transactionId: paymentResult.paymentIntent.id,
         billUrl,
-      });
-      
+        billingDetails: paymentResult.paymentMethod.billing_details
+      };
+
+      setPaymentDetails(fullDetails);
+      await submitPaymentDetails(fullDetails);
       setPaymentStatus('success');
     } catch (error) {
       console.error('Payment processing failed:', error);
@@ -146,6 +224,17 @@ const PaymentPage = ({ userId, projectId }) => {
       setStripeError('Payment processing failed. Please try again.');
     }
   };
+
+  if (!userId || !projectId) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <p className="text-xl text-red-500">Missing payment information</p>
+          <p>Redirecting you back...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -156,6 +245,7 @@ const PaymentPage = ({ userId, projectId }) => {
           orderData={orderData} 
           paymentDetails={paymentDetails} 
           billUrl={paymentDetails?.billUrl}
+          onComplete={() => navigate('/dashboard')}
         />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -180,8 +270,18 @@ const PaymentPage = ({ userId, projectId }) => {
                         <span className="font-medium">Credit Card</span>
                       </div>
                       <div className="flex space-x-2">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-8" />
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-8" />
+                        <img 
+                          src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" 
+                          alt="Visa" 
+                          className="h-8" 
+                          loading="lazy"
+                        />
+                        <img 
+                          src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" 
+                          alt="Mastercard" 
+                          className="h-8" 
+                          loading="lazy"
+                        />
                       </div>
                     </button>
                     
@@ -227,6 +327,12 @@ const PaymentPage = ({ userId, projectId }) => {
             {stripeError && (
               <div className="mt-4 p-4 bg-red-50 rounded-md">
                 <p className="text-red-600">{stripeError}</p>
+                <button
+                  onClick={() => setStripeError(null)}
+                  className="mt-2 text-sm text-red-600 hover:text-red-800"
+                >
+                  Try again
+                </button>
               </div>
             )}
             

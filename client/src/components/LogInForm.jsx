@@ -18,7 +18,7 @@ const [userData, setUserData] = useContext(UserContext);
 
 useEffect(() => {
     const checkAuth = async () => {
-    const authData = localStorage.getItem('authData');
+    const authData = JSON.parse(localStorage.getItem('authData'));
 
     if (authData) {
         try {
@@ -139,7 +139,7 @@ const handleGoogleLogin = useGoogleLogin({
         const userRes = await axios.post(`/api/login/google?${params}`);
 
         setUserData(userRes.data?.user);
-        localStorage.setItem('authData', userRes.data?.user);
+        localStorage.setItem('userData', JSON.stringify(userRes.data?.user));
 
         toast({
         title: `Welcome, ${res.data.name}!`,

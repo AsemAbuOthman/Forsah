@@ -137,7 +137,6 @@ const PasswordSettings = () => {
       }
     }
   };
-  
 
   const isFormComplete = (isGoogleAccount || passwords.current) && passwords.new && passwords.confirm;
 

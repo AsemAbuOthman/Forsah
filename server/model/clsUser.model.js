@@ -63,6 +63,9 @@ class clsUser{
     }
 
     static async updateProfile(id, newData) {
+
+        let result = null;
+
         try {
             const pool = await getConnection();
             const request = pool.request();
@@ -116,19 +119,21 @@ class clsUser{
                 WHERE userId = @userId;
                 
                 COMMIT TRANSACTION;
-                
-                SELECT * FROM users u
-                JOIN profiles p ON u.userId = p.userId
-                WHERE u.userId = @userId;
             `;
     
-            const result = await request.query(query);
+            result = await request.query(query);
     
-            return result.recordset[0] || null;
+            if(result.rowsAffected[0] > 0){
+
+                result = this.getProfile(id);
+            }
+
         } catch (error) {
             console.error('Error updating profile:', error);
             throw new Error('Failed to update profile');
         }
+
+        return result;
     }
 
     static async updatePasswordByEmail(newData){

@@ -1,68 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Eye, Search, ArrowUpDown, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import axios from 'axios';
 
-// Mock data for demonstration
-const mockBills = [
-{
-    billId: 'BILL-001',
-    generatedTime: '2024-02-15T10:30:00',
-    amount: 1500.00,
-    description: 'Web Development Services - January',
-    status: 'paid',
-    projectId: 'PRJ-001',
-    projectName: 'E-commerce Website'
-},
-{
-    billId: 'BILL-002',
-    generatedTime: '2024-02-20T14:45:00',
-    amount: 2000.00,
-    description: 'Mobile App Development - Sprint 1',
-    status: 'pending',
-    projectId: 'PRJ-002',
-    projectName: 'Mobile App'
-},
-{
-    billId: 'BILL-003',
-    generatedTime: '2024-02-25T09:15:00',
-    amount: 800.00,
-    description: 'UI/UX Design Services',
-    status: 'paid',
-    projectId: 'PRJ-003',
-    projectName: 'Dashboard Redesign'
-}
-];
-
-const mockPayments = [
-{
-    paymentId: 'PAY-001',
-    amountMoney: 1500.00,
-    paidTime: '2024-02-16T11:30:00',
-    status: 'completed',
-    projectId: 'PRJ-001',
-    billId: 'BILL-001',
-    method: 'bank_transfer'
-},
-{
-    paymentId: 'PAY-002',
-    amountMoney: 800.00,
-    paidTime: '2024-02-26T10:20:00',
-    status: 'completed',
-    projectId: 'PRJ-003',
-    billId: 'BILL-003',
-    method: 'credit_card'
-}
-];
-
-const TransactionsHistory = () => {
+const TransactionsHistory = ({ userId = JSON.parse(localStorage.getItem('userData')).userId[0] }) => {
 const [activeTab, setActiveTab] = useState('all');
 const [searchTerm, setSearchTerm] = useState('');
 const [selectedTransaction, setSelectedTransaction] = useState(null);
 const [isModalOpen, setIsModalOpen] = useState(false);
 const [sortConfig, setSortConfig] = useState({
-    key: 'generatedTime',
+    key: 'date',
     direction: 'desc'
 });
+const [transactions, setTransactions] = useState([]);
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState(null);
+
+useEffect(() => {
+    const fetchTransactions = async () => {
+    try {
+        setIsLoading(true);
+        const response = await axios.get(`/api/payments/${userId}`);
+        
+        if (response.data.success) {
+
+        const transformedData = [
+            ...response.data.payments.map(payment => ({
+                type: 'payment',
+                id: payment.paymentId,
+                amount: payment.paymentAmount,
+                date: payment.paidTime,
+                status: payment.paymentStatus.toLowerCase(),
+                projectId: payment.projectId,
+                method: payment.paymentMethod,
+                transactionId: payment.transactionId
+            })),
+            ...response.data.bills.map(bill => ({
+                type: 'bill',
+                id: bill.billId,
+                amount: bill.subtotal + (bill.subtotal * bill.tax),
+                date: response.data.payments.find(p => p.paymentId === bill.paymentId)?.paidTime || new Date().toISOString(),
+                status: 'paid', // Assuming bills are always paid if they exist
+                projectId: response.data.payments.find(p => p.paymentId === bill.paymentId)?.projectId,
+                billUrl: bill.billUrl,
+                tax: bill.tax,
+                subtotal: bill.subtotal
+            }))
+        ];
+        
+        setTransactions(transformedData);
+        } else {
+        setError(response.data.error || 'Failed to fetch transactions');
+        }
+    } catch (err) {
+        console.error('Error fetching transactions:', err);
+        setError(err.message || 'Failed to fetch transactions');
+    } finally {
+        setIsLoading(false);
+    }
+    };
+
+    if (userId) {
+    fetchTransactions();
+    }
+}, [userId]);
 
 const handleSort = (key) => {
     setSortConfig({
@@ -72,38 +73,26 @@ const handleSort = (key) => {
 };
 
 const filterTransactions = () => {
-    let transactions = [];
+    let filtered = [...transactions];
     
-    if (activeTab === 'all' || activeTab === 'bills') {
-    transactions = [...mockBills.map(bill => ({
-        ...bill,
-        type: 'bill',
-        amount: bill.amount,
-        date: bill.generatedTime
-    }))];
+    // Apply tab filter
+    if (activeTab !== 'all') {
+    filtered = filtered.filter(t => t.type === activeTab);
     }
     
-    if (activeTab === 'all' || activeTab === 'payments') {
-    transactions = [...transactions, ...mockPayments.map(payment => ({
-        ...payment,
-        type: 'payment',
-        amount: payment.amountMoney,
-        date: payment.paidTime
-    }))];
-    }
-
     // Apply search filter
     if (searchTerm) {
-    transactions = transactions.filter(transaction => 
-        transaction.type.includes(searchTerm.toLowerCase()) ||
-        transaction.status.includes(searchTerm.toLowerCase()) ||
-        (transaction.description && transaction.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (transaction.projectName && transaction.projectName.toLowerCase().includes(searchTerm.toLowerCase()))
+    const term = searchTerm.toLowerCase();
+    filtered = filtered.filter(t => 
+        t.type.includes(term) ||
+        t.status.includes(term) ||
+        (t.method && t.method.toLowerCase().includes(term)) ||
+        (t.projectId && t.projectId.toString().toLowerCase().includes(term))
     );
     }
 
     // Apply sorting
-    transactions.sort((a, b) => {
+    filtered.sort((a, b) => {
     if (sortConfig.key === 'amount') {
         return sortConfig.direction === 'asc' ? a.amount - b.amount : b.amount - a.amount;
     }
@@ -112,7 +101,7 @@ const filterTransactions = () => {
         : new Date(b[sortConfig.key]) - new Date(a[sortConfig.key]);
     });
 
-    return transactions;
+    return filtered;
 };
 
 const getStatusIcon = (status) => {
@@ -143,6 +132,29 @@ const getStatusClass = (status) => {
     }
 };
 
+const getProjectName = (projectId) => {
+    // In a real app, you might fetch project names from another API
+    return `Project ${projectId}`;
+};
+
+if (isLoading) {
+    return (
+    <div className="max-w-7xl mx-auto p-6 bg-white rounded-xl shadow-lg flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+    </div>
+    );
+}
+
+if (error) {
+    return (
+    <div className="max-w-7xl mx-auto p-6 bg-white rounded-xl shadow-lg">
+        <div className="text-red-500 p-4 bg-red-50 rounded-lg">
+        Error: {error}
+        </div>
+    </div>
+    );
+}
+
 return (
     <div className="max-w-7xl mx-auto p-6 bg-white rounded-xl shadow-lg">
     <div className="mb-8">
@@ -161,9 +173,9 @@ return (
             All Transactions
             </button>
             <button
-            onClick={() => setActiveTab('bills')}
+            onClick={() => setActiveTab('bill')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'bills'
+                activeTab === 'bill'
                 ? 'bg-violet-100 text-violet-700'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -171,9 +183,9 @@ return (
             Bills
             </button>
             <button
-            onClick={() => setActiveTab('payments')}
+            onClick={() => setActiveTab('payment')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'payments'
+                activeTab === 'payment'
                 ? 'bg-violet-100 text-violet-700'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -195,83 +207,89 @@ return (
         </div>
     </div>
 
-    <div className="overflow-x-auto">
+    {filterTransactions().length === 0 ? (
+        <div className="text-center py-12">
+        <p className="text-gray-500">No transactions found</p>
+        </div>
+    ) : (
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+            <thead className="bg-gray-50">
             <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Type
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('date')}>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('date')}>
                 <div className="flex items-center">
-                Date
-                <ArrowUpDown className="ml-1 h-4 w-4" />
+                    Date
+                    <ArrowUpDown className="ml-1 h-4 w-4" />
                 </div>
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('amount')}>
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('amount')}>
                 <div className="flex items-center">
-                Amount
-                <ArrowUpDown className="ml-1 h-4 w-4" />
+                    Amount
+                    <ArrowUpDown className="ml-1 h-4 w-4" />
                 </div>
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Project
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
-            </th>
+                </th>
             </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
             {filterTransactions().map((transaction) => (
-            <tr key={transaction.type === 'bill' ? transaction.billId : transaction.paymentId} className="hover:bg-gray-50">
+                <tr key={`${transaction.type}-${transaction.id}`} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                <span className="capitalize font-medium text-gray-900">
+                    <span className="capitalize font-medium text-gray-900">
                     {transaction.type}
-                </span>
+                    </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {format(new Date(transaction.date), 'MMM dd, yyyy HH:mm')}
+                    {format(new Date(transaction.date), 'MMM dd, yyyy HH:mm')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-gray-900">
                     ${transaction.amount.toFixed(2)}
-                </span>
+                    </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                <div className="flex items-center">
+                    <div className="flex items-center">
                     {getStatusIcon(transaction.status)}
                     <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusClass(transaction.status)}`}>
-                    {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
                     </span>
-                </div>
+                    </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {transaction.projectName || `Project ${transaction.projectId}`}
+                    {getProjectName(transaction.projectId)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                <button
+                    <button
                     onClick={() => {
-                    setSelectedTransaction(transaction);
-                    setIsModalOpen(true);
+                        setSelectedTransaction(transaction);
+                        setIsModalOpen(true);
                     }}
                     className="text-violet-600 hover:text-violet-900 transition-colors"
-                >
+                    >
                     <Eye className="h-5 w-5" />
-                </button>
+                    </button>
                 </td>
-            </tr>
+                </tr>
             ))}
-        </tbody>
+            </tbody>
         </table>
-    </div>
+        </div>
+    )}
 
     {/* Transaction Details Modal */}
     {isModalOpen && selectedTransaction && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/20 bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl max-w-2xl w-full p-6 relative">
             <button
             onClick={() => setIsModalOpen(false)}
@@ -293,7 +311,7 @@ return (
             <div>
                 <p className="text-sm font-medium text-gray-500">ID</p>
                 <p className="mt-1 text-sm text-gray-900">
-                {selectedTransaction.type === 'bill' ? selectedTransaction.billId : selectedTransaction.paymentId}
+                {selectedTransaction.id}
                 </p>
             </div>
 
@@ -322,23 +340,30 @@ return (
             <div>
                 <p className="text-sm font-medium text-gray-500">Project</p>
                 <p className="mt-1 text-sm text-gray-900">
-                {selectedTransaction.projectName || `Project ${selectedTransaction.projectId}`}
+                {getProjectName(selectedTransaction.projectId)}
                 </p>
             </div>
 
-            {selectedTransaction.description && (
-                <div className="col-span-2">
-                <p className="text-sm font-medium text-gray-500">Description</p>
-                <p className="mt-1 text-sm text-gray-900">{selectedTransaction.description}</p>
-                </div>
-            )}
-
-            {selectedTransaction.type === 'payment' && (
+            {selectedTransaction.type === 'payment' && selectedTransaction.method && (
                 <div className="col-span-2">
                 <p className="text-sm font-medium text-gray-500">Payment Method</p>
                 <p className="mt-1 text-sm text-gray-900 capitalize">
                     {selectedTransaction.method.replace('_', ' ')}
                 </p>
+                </div>
+            )}
+
+            {selectedTransaction.type === 'bill' && selectedTransaction.billUrl && (
+                <div className="col-span-2">
+                <p className="text-sm font-medium text-gray-500">Bill</p>
+                <a 
+                    href={selectedTransaction.billUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="mt-1 text-sm text-violet-600 hover:underline"
+                >
+                    View Bill PDF
+                </a>
                 </div>
             )}
             </div>

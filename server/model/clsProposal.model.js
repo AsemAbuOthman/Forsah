@@ -30,7 +30,8 @@ class clsProposal{
                 users.createdAt as joinedDate,
                 languages.language,
                 countries.countryName,
-                images.imageUrl
+                images.imageUrl,
+                projects.projectTitle
 
 
                 FROM proposals
@@ -154,6 +155,73 @@ class clsProposal{
         return result;
     }
     
+
+    static async getRecommendedProposals(userId) {
+        let result = null;
+    
+        try {
+            const pool = await getConnection();
+    
+            result = await pool.request().query`
+                WITH RankedProposals AS (
+                    SELECT 
+                        p.proposalId,
+                        p.projectId,
+                        p.userId,
+                        p.proposalAmount,
+                        p.proposalDeadline,
+                        p.proposalDescription,
+                        p.createdAt,
+                        p.proposalStateId,
+                        u.username,
+                        u.firstName,
+                        u.lastName,
+                        u.city,
+                        u.createdAt as joinedDate,
+                        l.language,
+                        c.countryName,
+                        img.imageUrl,
+                        pr.projectTitle,
+                        ROW_NUMBER() OVER (PARTITION BY p.projectId ORDER BY p.createdAt DESC) as rn
+                    FROM 
+                        proposals p
+                    INNER JOIN 
+                        projects pr ON p.projectId = pr.projectId
+                    INNER JOIN 
+                        users u ON u.userId = p.userId
+                    INNER JOIN 
+                        countries c ON c.countryId = u.countryId
+                    INNER JOIN 
+                        languages l ON l.languageId = u.languageId
+                    INNER JOIN 
+                        profiles pf ON pf.userId = p.userId
+                    INNER JOIN 
+                        images img ON pf.profileId = img.imageableId AND img.imageableType = 'profile'
+                    WHERE 
+                        pr.userId = ${userId} 
+                        AND p.proposalStateId = 1
+                )
+                SELECT * FROM RankedProposals WHERE rn <= 3
+                ORDER BY createdAt DESC;
+            `;
+    
+            const proposalsResult = result.recordset;
+    
+            result = {
+                success: true,
+                proposals: proposalsResult
+            };
+    
+        } catch (error) {
+            console.error("Error getting recommended proposals:", error);
+            result = {
+                success: false,
+                error: error.message
+            };
+        }
+    
+        return result;
+    }
 
     static async checkProposal(projectId, freelancerId) {
         

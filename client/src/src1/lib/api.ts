@@ -28,7 +28,7 @@ import { id } from 'date-fns/locale';
   // User API
 export const getUserProfile = async (userId: number): Promise<User> => {
 
-  const response = await api.get(`/users/${userId}`); 
+  const response = await api.get(`/users/${userId[0]}`); 
   return await response.data.user as User;
 };
 
@@ -36,7 +36,7 @@ export const getUserProfile = async (userId: number): Promise<User> => {
 export const updateUserProfile = async (userId: number, userData: Promise<User>): Promise<User> => {
   
   console.log("update user profile : ", userData);
-  const response = await api.patch(`/users/${userId[0] }`, userData);
+  const response = await api.patch(`/users/${userId}`, userData);
   console.log("response after update user profile : ", response.data.user);
   
   return response.data.user as User;

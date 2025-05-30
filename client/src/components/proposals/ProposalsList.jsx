@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 const ProposalsList = ({ 
   proposals = [], 
@@ -70,16 +71,63 @@ const ProposalsList = ({
   };
 
   const handleAwardClick = async (proposal) => {
-    setLoadingStates(prev => ({ ...prev, [proposal.proposalId]: { ...prev[proposal.proposalId], awardLoading: true } }));
+    setLoadingStates(prev => ({ 
+      ...prev, 
+      [proposal.proposalId]: { 
+        ...prev[proposal.proposalId], 
+        awardLoading: true 
+      } 
+    }));
+
+    console.log('This pro : ', proposal);
+    
     
     try {
-      // In a real app, you might want to confirm with the user first
-      // and possibly make an API call to mark the proposal as awarded
-      navigate('/payment', { state: { proposal } });
+      // Safely get user data from localStorage
+      const userDataString = localStorage.getItem('userData');
+      if (!userDataString) {
+        throw new Error('User data not found. Please log in again.');
+      }
+  
+      const userData = JSON.parse(userDataString);
+      
+      // Validate we have a userId
+      const userId = Array.isArray(userData.userId) 
+        ? userData.userId[0] 
+        : userData.userId;
+      
+      if (!userId) {
+        throw new Error('User ID not found in user data.');
+      }
+  
+      // Validate proposal data
+      if (!proposal || !proposal.projectId) {
+        throw new Error('Invalid proposal data.');
+      }
+  
+      console.log('1 proposal: ', proposal);
+      console.log('2 userId: ', userId);
+      console.log('3 proposal.projectId: ', proposal.projectId);
+
+      navigate('/payment', { 
+        state: { 
+          proposalData: proposal, 
+          userId: userId, 
+          projectId: proposal.projectId 
+        } 
+      });
     } catch (error) {
       console.error('Error awarding project:', error);
+      // You might want to show this error to the user
+      toast.error(error.message || 'Failed to award project. Please try again.');
     } finally {
-      setLoadingStates(prev => ({ ...prev, [proposal.proposalId]: { ...prev[proposal.proposalId], awardLoading: false } }));
+      setLoadingStates(prev => ({ 
+        ...prev, 
+        [proposal.proposalId]: { 
+          ...prev[proposal.proposalId], 
+          awardLoading: false 
+        } 
+      }));
     }
   };
 

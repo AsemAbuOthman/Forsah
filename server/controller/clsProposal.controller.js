@@ -27,6 +27,29 @@ const clsProposal = require('../model/clsProposal.model');
         }
     }
 
+    const getRecommendedProposals =  async (req, res, userId)=>{
+
+        try {
+            
+            const proposals = await clsProposal.getRecommendedProposals(userId);
+
+            if (proposals) {
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(proposals));
+            } else {
+
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: 'Not found' }));
+            }
+        } catch (error) {
+            
+            console.log(error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Internal server error' }));
+        }
+    }
+
     const getMyProposals =  async (req, res, userId)=>{
 
         try {
@@ -156,6 +179,7 @@ const clsProposal = require('../model/clsProposal.model');
 module.exports = {
 
     getProposals,
+    getRecommendedProposals,
     getMyProposals,
     createProposal,
     checkProposals,

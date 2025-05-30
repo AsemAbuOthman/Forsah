@@ -82,6 +82,7 @@ export default function Router() {
                     <Route path='/login' element={<LogInForm />} />
                     <Route path='/logout' element={<LogOut />} />
                     <Route path="/forgot_password" element={<ForgotPasswordForm />} />
+                    <Route path="/StarRating" element={<StarRating />} />
 
                     <Route path='/proposals_table' element={                   
                         <ProtectedDashboardRoute>

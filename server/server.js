@@ -5,6 +5,8 @@ const url = require('url');
 const path = require('path');
 const querystring = require('querystring');
 const getRawBody = require('raw-body');
+const stripe = require('stripe')('sk_test_51RNvo0PD2ZfT0veAYBYuNgQPFMaEfh6KumEjPtElMhNnrxYsfMkoL3nU1DgSMZwtoiZei11cZEjEgBhcbxJ3SApD00aTqvb9d1');
+
 
 const { 
         isEmailExist,
@@ -65,6 +67,7 @@ const{
 const{
 
     getProposals,
+    getRecommendedProposals,
     getMyProposals,
     createProposal,
     checkProposals,
@@ -82,6 +85,13 @@ const{
     getMessageHistory,
     deleteMessage
 } = require('./controller/clsMessage.controller');
+
+
+const {
+
+    addPayment,
+    getPayments
+} = require('./controller/clsPayment.controller');
 
 
 const { default: axios } = require('axios');
@@ -218,6 +228,94 @@ const server = http.createServer(async (req, res)=>{
         return getUserByGoogle(req, res, googleAccount);
     }
 
+
+    if (pathUrl.startsWith('/api/create-payment-intent') && req.method === 'POST') {
+        try {
+            const rawBody = await getRawBody(req);
+            const { amount, currency, metadata } = JSON.parse(rawBody.toString());
+        
+            // Validate input
+            if (!amount || isNaN(amount)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: 'Invalid amount' }));
+            }
+        
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(amount),
+            currency: currency || 'usd',
+            metadata: metadata || {},
+            payment_method_types: ['card'],
+            capture_method: 'automatic',
+        });
+    
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            clientSecret: paymentIntent.client_secret,
+            paymentIntentId: paymentIntent.id,
+        }));
+        
+    
+        } catch (err) {
+        console.error('Stripe error:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' }); // ✅ Fix: correct header
+        return res.end(JSON.stringify({
+            error: 'Failed to create payment intent',
+            details: err.message,
+        }));
+        }
+    }
+
+    if(pathUrl.startsWith('/api/recommended/')){
+
+        const userIdStr = pathUrl.split('/api/recommended/')[1];
+        const userId = parseInt(userIdStr, 10);
+    
+        console.log('Parsed userId from URL =>', userId);
+        
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end('Invalid user ID');
+        }
+
+        return getRecommendedProposals(req, res, userId);
+    }
+
+    if(pathUrl.startsWith('/api/payment/') && req.method === 'POST'){
+
+
+        const body = await getRawBody(req);
+
+        return addPayment(req, res, body.toString());
+    }
+
+    if(pathUrl.startsWith('/api/payments/')){
+
+        const userIdStr = pathUrl.split('/api/payments/')[1];
+        const userId = parseInt(userIdStr, 10);
+    
+        console.log('Parsed userId from URL =>', userId);
+        
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end('Invalid user ID');
+        }
+
+        return getPayments(req, res, userId);
+    }
+
+    if (pathUrl.startsWith('/api/users/') && req.method === 'PATCH') {
+        const userIdStr = pathUrl.split('/api/users/')[1];
+        const userId = parseInt(userIdStr, 10);
+    
+        if (isNaN(userId)) {
+            res.statusCode = 400;
+            return res.end('Invalid user ID');
+        }
+    
+        const body = await getRawBody(req);
+        return updateProfile(req, res, userId, body.toString());
+    }
+
     if(pathUrl.startsWith('/api/users/role/') && req.method === 'POST'){
 
         const userIdStr = pathUrl.split('/api/users/role/')[1];
@@ -346,7 +444,6 @@ const server = http.createServer(async (req, res)=>{
         return createSkills(req, res, body.toString());
     }
 
-
     // export const createSkill = async (skillData: Omit<Skill, 'id'>): Promise<Skill> => {
     //     const response = await api.post('/skills/', skillData);
     //     return response.data;
@@ -360,7 +457,6 @@ const server = http.createServer(async (req, res)=>{
     // export const deleteSkill = async (skillId: number): Promise<void> => {
     //     await api.delete(`/skills/${skillId}`);
     // };
-
     
     if (pathUrl.startsWith('/api/users/') && pathUrl.includes('/portfolios')  &&  req.method === 'POST') {
 
@@ -379,7 +475,6 @@ const server = http.createServer(async (req, res)=>{
         
         return createPortfolio(req, res, userIdNum, body.toString());
     }
-
 
     if (pathUrl.startsWith('/api/portfolios') && req.method === 'PATCH') {
 
@@ -664,18 +759,6 @@ const server = http.createServer(async (req, res)=>{
         return updateProfileImage(req, res, id, body.toString());
     }
 
-    if (pathUrl.startsWith('/api/users/') && req.method === 'PATCH') {
-        const userIdStr = pathUrl.split('/api/users/')[1];
-        const userId = parseInt(userIdStr, 10);
-    
-        if (isNaN(userId)) {
-            res.statusCode = 400;
-            return res.end('Invalid user ID');
-        }
-    
-        const body = await getRawBody(req);
-        return updateProfile(req, res, userId, body.toString());
-    }
 
     if (pathUrl.startsWith('/api/users/')) {
         const userIdStr = pathUrl.split('/api/users/')[1];
@@ -1007,12 +1090,6 @@ const server = http.createServer(async (req, res)=>{
         return deleteMessage(req, res, messageId, userId);
     }
 
-    if (pathUrl.startsWith('/api/password/') && req.method === 'POST') {
-    
-        const body = await getRawBody(req);
-        return updatePasswordByEmail(req, res, body.toString());
-    }
-
     if (pathUrl.startsWith('/api/password/') && req.method === 'PATCH') {
         const userIdStr = pathUrl.split('/api/password/')[1];
         const userId = parseInt(userIdStr, 10);
@@ -1024,6 +1101,12 @@ const server = http.createServer(async (req, res)=>{
     
         const body = await getRawBody(req);
         return updatePassword(req, res, userId, body.toString());
+    }
+
+    if (pathUrl.startsWith('/api/password/') && req.method === 'POST') {
+    
+        const body = await getRawBody(req);
+        return updatePasswordByEmail(req, res, body.toString());
     }
 
     if (pathUrl.startsWith('/api/forget_password') && req.method === 'POST') {
